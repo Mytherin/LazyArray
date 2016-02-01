@@ -24,13 +24,14 @@ extern "C" {
 typedef struct {
     PyObject_HEAD
     PyCFunction function;
+    PyCFunction inplace_function;
     PyObject *a;
     PyObject *b;
 } PyLazyFunctionOperation;
 
 PyAPI_DATA(PyTypeObject) PyLazyFunctionOperation_Type;
 
-PyObject *PyLazyFunction_FromFunction(PyCFunction, PyObject *, PyObject *);
+PyObject *PyLazyFunction_FromFunction(PyCFunction, PyCFunction, PyObject *, PyObject *);
 
 typedef struct {
     PyObject_VAR_HEAD

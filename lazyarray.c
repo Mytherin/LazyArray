@@ -54,8 +54,15 @@ PyObject *PyLazyArray_FromOperation(PyLazyFunctionOperation* operation) {
 
 bool 
 PyLazyArray_Materialize(PyLazyArrayObject *self) {
-    if (self->materialized) return;
-    PyObject *ret = (self->operation->function(self->operation->a, self->operation->b));
+    if (self->materialized) return true;
+    PyObject *ret;
+    if (self->operation->a->ob_refcnt == 1) {
+        ret = (self->operation->inplace_function(self->operation->a, self->operation->b));
+    } else if (self->operation->b->ob_refcnt == 1) {
+        ret = (self->operation->inplace_function(self->operation->b, self->operation->a));
+    } else {
+        ret = (self->operation->function(self->operation->a, self->operation->b));
+    }
     if (ret == NULL) return false;
     self->nparr = (PyArrayObject*)ret;
     self->materialized = true;
@@ -72,7 +79,7 @@ _lazyarray_materialize(PyLazyArrayObject *self, PyObject *args) {
         PyErr_SetString(PyExc_TypeError, "The lazy array is not materialized, and we don't know how to materialize it.");
         return NULL;
     }
-    PyLazyArray_Materialize(self);
+    PyLazyArray_MATERIALIZE(self);
     Py_INCREF(self);
     return (PyObject*) self;
 }
@@ -99,8 +106,20 @@ lazyarray_##tpe(PyObject *v, PyObject *w) {                                     
     return PyArray_Type.tp_as_number->nb_##tpe(v, w);                                                                                                \
 }                                                                                                                                                    \
 static PyObject *                                                                                                                                    \
+lazyarray_inplace_##tpe(PyObject *v, PyObject *w) {                                                                                                  \
+    if (PyLazyArray_CheckExact(v)) {                                                                                                                 \
+        PyLazyArray_MATERIALIZE(v);                                                                                                                  \
+        v = (PyObject*)PyLazyArray_ASNUMPY(v);                                                                                                       \
+    }                                                                                                                                                \
+    if (PyLazyArray_CheckExact(w)) {                                                                                                                 \
+        PyLazyArray_MATERIALIZE(w);                                                                                                                  \
+        w = (PyObject*)PyLazyArray_ASNUMPY(w);                                                                                                       \
+    }                                                                                                                                                \
+    return PyArray_Type.tp_as_number->nb_inplace_##tpe(v, w);                                                                                        \
+}                                                                                                                                                    \
+static PyObject *                                                                                                                                    \
 lazyarray_lazy##tpe(PyLazyArrayObject *v, PyLazyArrayObject *w) {                                                                                    \
-    PyLazyFunctionOperation *op = (PyLazyFunctionOperation*)PyLazyFunction_FromFunction((PyCFunction)lazyarray_##tpe, (PyObject*)v, (PyObject*)w);   \
+    PyLazyFunctionOperation *op = (PyLazyFunctionOperation*)PyLazyFunction_FromFunction((PyCFunction)lazyarray_##tpe, (PyCFunction)lazyarray_inplace_##tpe, (PyObject*)v, (PyObject*)w);   \
     return PyLazyArray_FromOperation(op);                                                                                                            \
 }
 
@@ -224,12 +243,13 @@ PyTypeObject PyLazyArray_Type = {
 };
 
 PyObject*
-PyLazyFunction_FromFunction(PyCFunction function, PyObject *a, PyObject *b) {
+PyLazyFunction_FromFunction(PyCFunction function, PyCFunction inplace_function, PyObject *a, PyObject *b) {
     PyLazyFunctionOperation *op = PyObject_MALLOC(sizeof(PyLazyFunctionOperation));
     if (op == NULL)
         return PyErr_NoMemory();
     PyObject_Init((PyObject*)op, &PyLazyFunctionOperation_Type);
     op->function = function;
+    op->inplace_function = inplace_function;
     Py_XINCREF(a);
     op->a = a;
     Py_XINCREF(b);
