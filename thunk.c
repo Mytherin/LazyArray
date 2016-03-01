@@ -15,7 +15,7 @@ void PyThunk_Evaluate(PyThunkObject *thunk) {
 		UnaryFunction function = (UnaryFunction)(operation->function);
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
 				// the referenced object has only one reference (from here)
 				// this means it will get destroyed after this operation
 				// since it has the same type, we can use its storage directly
@@ -31,9 +31,9 @@ void PyThunk_Evaluate(PyThunkObject *thunk) {
 		BinaryFunction function = (BinaryFunction)(operation->function);
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-			} else if (operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
+			} else if (PyThunk_CheckExact(operation->right) && operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
 				thunk->storage = ((PyThunkObject*)operation->right)->storage;
 			} else {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
@@ -51,10 +51,12 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation)) {
 		PyThunkOperation_UnaryPipeline *operation = (PyThunkOperation_UnaryPipeline*)thunk->operation;
 		UnaryPipelineFunction function = (UnaryPipelineFunction)(operation->function);
-		PyThunk_EvaluateBlock(operation->left, block);
+		if (PyThunk_CheckExact(operation->left)) {
+			PyThunk_EvaluateBlock((PyThunkObject*)operation->left, block);
+		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
 				// the referenced object has only one reference (from here)
 				// this means it will get destroyed after this operation
 				// since it has the same type, we can use its storage directly
@@ -69,13 +71,17 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 	} else if (PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryPipeline *operation = (PyThunkOperation_BinaryPipeline*)thunk->operation;
 		BinaryPipelineFunction function = (BinaryPipelineFunction)(operation->function);
-		PyThunk_EvaluateBlock(operation->left, block);
-		PyThunk_EvaluateBlock(operation->right, block);
+		if (PyThunk_CheckExact(operation->left)) {
+			PyThunk_EvaluateBlock((PyThunkObject*)operation->left, block);
+		}
+		if (PyThunk_CheckExact(operation->right)) {
+			PyThunk_EvaluateBlock((PyThunkObject*)operation->right, block);
+		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-			} else if (operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
+			} else if (PyThunk_CheckExact(operation->right) && operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
 				thunk->storage = ((PyThunkObject*)operation->right)->storage;
 			} else {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
