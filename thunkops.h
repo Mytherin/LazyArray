@@ -14,8 +14,8 @@ extern "C" {
 
 #define BLOCK_SIZE 1024
 
-typedef void (*UnaryPipelineFunction)(void *storage, void *a, size_t block, int storage_type, int a_type);
-typedef void (*BinaryPipelineFunction)(void *storage, void *a, void *b, size_t block, int storage_type, int a_type, int b_type);
+typedef void (*UnaryPipelineFunction)(void *storage, void *a, size_t start, size_t end, int storage_type, int a_type);
+typedef void (*BinaryPipelineFunction)(void *storage, void *a, void *b, size_t start, size_t end, int storage_type, int a_type, int b_type);
 typedef void (*UnaryFunction)(void *storage, void *a);
 typedef void (*BinaryFunction)(void *storage, void *a, void *b);
 
@@ -69,8 +69,8 @@ PyAPI_DATA(PyTypeObject) PyThunkBinaryFunction_Type;
 PyObject* PyThunkUnaryPipeline_FromFunction(UnaryPipelineFunction function, PyObject *left);
 PyObject* PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right);
 
-void pipeline_sqrt(void *storage, void *a, size_t block, int storage_type, int a_type);
-void pipeline_multiplication(void *storage, void *a, void *b, size_t block, int storage_type, int a_type, int b_type);
+void pipeline_sqrt(void *storage, void *a, size_t start, size_t end, int storage_type, int a_type);
+void pipeline_multiplication(void *storage, void *a, void *b, size_t start, size_t end, int storage_type, int a_type, int b_type);
 
 #ifdef __cplusplus
 }

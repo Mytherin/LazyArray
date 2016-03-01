@@ -48,6 +48,9 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 	if (PyThunk_IsEvaluated(thunk) || PyThunk_IsEvaluatedBlock(thunk, block)) {
 		return;
 	}
+    size_t start = block * BLOCK_SIZE;
+    size_t end = min((block + 1) * BLOCK_SIZE, thunk->cardinality);
+
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation)) {
 		PyThunkOperation_UnaryPipeline *operation = (PyThunkOperation_UnaryPipeline*)thunk->operation;
 		UnaryPipelineFunction function = (UnaryPipelineFunction)(operation->function);
@@ -66,7 +69,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), block, PyThunk_Type(thunk), PyThunk_Type(operation->left));
+		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), start, end, PyThunk_Type(thunk), PyThunk_Type(operation->left));
 		PyBlockMask_SetBlock(thunk->blockmask, block);
 	} else if (PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryPipeline *operation = (PyThunkOperation_BinaryPipeline*)thunk->operation;
@@ -87,7 +90,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), PyThunk_GetData(operation->right), block, PyThunk_Type(thunk), PyThunk_Type(operation->left), PyThunk_Type(operation->right));
+		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), PyThunk_GetData(operation->right), start, end, PyThunk_Type(thunk), PyThunk_Type(operation->left), PyThunk_Type(operation->right));
 		PyBlockMask_SetBlock(thunk->blockmask, block);
 	} else {
 		PyThunk_Evaluate(thunk);
