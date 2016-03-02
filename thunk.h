@@ -37,20 +37,20 @@ PyAPI_DATA(PyTypeObject) PyThunk_Type;
 
 
 // Evaluate the entire thunk
-void PyThunk_Evaluate(PyThunkObject *thunk);
+PyObject* PyThunk_Evaluate(PyThunkObject *thunk);
 // Evaluate the specified block of the thunk
-void PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block);
+PyObject* PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block);
 // Returns true if the thunk has been evaluated, and false otherwise
 bool PyThunk_IsEvaluated(PyThunkObject *thunk);
 // Returns true if the specified block of the thunk has been evaluated, and false otherwise
 bool PyThunk_IsEvaluatedBlock(PyThunkObject *thunk, size_t block);
-PyObject* PyThunk_AsArray(PyThunkObject *thunk);
 
 #define PyThunk_DATA(obj) PyArray_DATA(((PyThunkObject*)obj)->storage)
 #define PyThunk_GetData(obj) PyThunk_DATA(obj)
 #define PyThunk_Cardinality(obj) ((PyThunkObject*)obj)->cardinality
 #define PyThunk_Type(obj) ((PyThunkObject*)obj)->type
 
+PyObject *PyThunk_AsArray(PyObject*);
 PyObject *PyThunk_FromArray(PyObject *, PyObject*);
 PyObject *PyThunk_FromExactOperation(PyObject *operation, ssize_t cardinality, int type);
 

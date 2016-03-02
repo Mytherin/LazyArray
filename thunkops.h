@@ -12,21 +12,26 @@ extern "C" {
 #include <numpy/arrayobject.h>
 
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 10000
 
 typedef void (*UnaryPipelineFunction)(void *storage, void *a, size_t start, size_t end, int storage_type, int a_type);
-typedef void (*BinaryPipelineFunction)(void *storage, void *a, void *b, size_t start, size_t end, int storage_type, int a_type, int b_type);
+typedef void (*BinaryPipelineFunction)(void *storage, void *a, void *b, size_t start, size_t end, int a_type, int b_type);
 typedef void (*UnaryFunction)(void *storage, void *a);
 typedef void (*BinaryFunction)(void *storage, void *a, void *b);
 
+#define PyThunkOps_HEAD           \
+	PyObject_HEAD              \
+	PyCFunction base_function;
+
+
 typedef struct {
-	PyObject_HEAD
+	PyThunkOps_HEAD
 } PyThunkOperation;
 
 PyAPI_DATA(PyTypeObject) PyThunkOperation_Type;
 
 typedef struct {
-	PyObject_HEAD
+	PyThunkOps_HEAD
 	UnaryPipelineFunction function;
 	PyObject *left;
 } PyThunkOperation_UnaryPipeline;
@@ -34,7 +39,7 @@ typedef struct {
 PyAPI_DATA(PyTypeObject) PyThunkUnaryPipeline_Type;
 
 typedef struct {
-	PyObject_HEAD
+	PyThunkOps_HEAD
 	BinaryPipelineFunction function;
 	PyObject *left;
 	PyObject *right;
@@ -43,7 +48,7 @@ typedef struct {
 PyAPI_DATA(PyTypeObject) PyThunkBinaryPipeline_Type;
 
 typedef struct {
-	PyObject_HEAD
+	PyThunkOps_HEAD
 	UnaryFunction function;
 	PyObject *left;
 } PyThunkOperation_UnaryFunction;
@@ -51,7 +56,7 @@ typedef struct {
 PyAPI_DATA(PyTypeObject) PyThunkUnaryFunction_Type;
 
 typedef struct {
-	PyObject_HEAD
+	PyThunkOps_HEAD
 	BinaryFunction function;
 	PyObject *left;
 	PyObject *right;
