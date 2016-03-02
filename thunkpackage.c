@@ -1,5 +1,6 @@
 
 #include "thunk.h"
+#include "initializers.h"
 
 static char module_docstring[] =
     "This module provides THUNKS.";
@@ -15,6 +16,7 @@ PyMODINIT_FUNC initthunklib(void);
 PyMODINIT_FUNC initthunklib(void)
 {   
     PyThunk_Init();
+    initialize_thunk_as_number();
 
     //initialize module
     PyObject *m = Py_InitModule3("thunklib", module_methods, module_docstring);

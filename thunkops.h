@@ -67,10 +67,11 @@ PyAPI_DATA(PyTypeObject) PyThunkBinaryFunction_Type;
 #define PyThunkBinaryFunction_CheckExact(op) ((op)->ob_type == &PyThunkBinaryFunction_Type)
 
 PyObject* PyThunkUnaryPipeline_FromFunction(UnaryPipelineFunction function, PyObject *left);
-PyObject* PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right);
+PyObject* PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right, PyCFunction base_function);
+
+#include "generated/thunkops_binarypipeline.h"
 
 void pipeline_sqrt(void *storage, void *a, size_t start, size_t end, int storage_type, int a_type);
-void pipeline_multiplication(void *storage, void *a, void *b, size_t start, size_t end, int storage_type, int a_type, int b_type);
 
 #ifdef __cplusplus
 }
