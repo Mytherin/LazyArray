@@ -57,6 +57,7 @@ PyObject *PyThunk_FromExactOperation(PyObject *operation, ssize_t cardinality, i
 void PyThunk_Init(void);
 
 PyNumberMethods thunk_as_number;
+extern struct PyMethodDef thunk_methods[];
 
 #ifdef __cplusplus
 }

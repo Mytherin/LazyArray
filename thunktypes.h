@@ -5,5 +5,6 @@
 #include "thunkops.h"
 
 int StandardBinaryTypeResolution(int type, int type2);
+int FloatUnaryTypeResolution(int type);
 
 #endif

@@ -65,7 +65,7 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 PyObject* 
 PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 	if (PyThunk_IsEvaluated(thunk) || PyThunk_IsEvaluatedBlock(thunk, block)) {
-		return;
+		Py_RETURN_NONE;
 	}
     size_t start = block * BLOCK_SIZE;
     size_t end = min((block + 1) * BLOCK_SIZE, thunk->cardinality);
@@ -97,7 +97,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), start, end, PyThunk_Type(thunk), PyThunk_Type(operation->left));
+		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), start, end, PyThunk_Type(operation->left));
 		PyBlockMask_SetBlock(thunk->blockmask, block);
 	} else if (PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryPipeline *operation = (PyThunkOperation_BinaryPipeline*)thunk->operation;
@@ -176,7 +176,7 @@ PyThunk_FromArray(PyObject *unused, PyObject *input) {
 
 PyObject*
 PyThunk_AsArray(PyObject* thunk) {
-	if (PyThunk_Evaluate(thunk) == NULL) {
+	if (PyThunk_Evaluate((PyThunkObject*)thunk) == NULL) {
 		return NULL;
 	}
 	return (PyObject*)((PyThunkObject*)thunk)->storage;
@@ -207,33 +207,6 @@ thunk_str(PyThunkObject *self)
 	}
     return PyArray_Type.tp_str((PyObject*)self->storage);
 }
-
-static PyObject *
-_thunk_evaluate(PyThunkObject *self, PyObject *args) {
-    (void) args;
-	if (PyThunk_Evaluate(self) == NULL) {
-		return NULL;
-	}
-    PyThunk_Evaluate(self);
-    Py_RETURN_NONE;
-}
-
-static PyObject *
-_thunk_isevaluated(PyThunkObject *self, PyObject *args) {
-    (void) args;
-    if (PyThunk_IsEvaluated(self)) {
-    	Py_RETURN_TRUE;
-    }
-    Py_RETURN_FALSE;
-}
-
-
-static PyMethodDef thunk_methods[] = {
-    {"evaluate", (PyCFunction)_thunk_evaluate, METH_NOARGS,"evaluate() => "},
-    {"isevaluated", (PyCFunction)_thunk_isevaluated, METH_NOARGS,"isevaluated() => "},
-    {NULL}  /* Sentinel */
-};
-
 
 
 PyTypeObject PyThunk_Type = {
