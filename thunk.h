@@ -8,10 +8,6 @@ extern "C" {
 #include "blockmask.h"
 #include "thunkops.h"
 
-#define THUNK_CARDINALITY_EXACT    0x0001
-#define THUNK_CARDINALITY_MAXIMUM  0x0002
-#define THUNK_CARDINALITY_APPROX   0x0004
-
 #define PyThunk_HEAD     \
 	PyObject_HEAD        \
 	ssize_t cardinality; \
@@ -52,7 +48,7 @@ bool PyThunk_IsEvaluatedBlock(PyThunkObject *thunk, size_t block);
 
 PyObject *PyThunk_AsArray(PyObject*);
 PyObject *PyThunk_FromArray(PyObject *, PyObject*);
-PyObject *PyThunk_FromExactOperation(PyObject *operation, ssize_t cardinality, int type);
+PyObject *PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
 
 void PyThunk_Init(void);
 

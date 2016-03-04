@@ -2,13 +2,12 @@
 #include "thunkops.h"
 
 PyObject*
-PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right, PyCFunction base_function) {
+PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right) {
     PyThunkOperation_BinaryPipeline *op = PyObject_MALLOC(sizeof(PyThunkOperation_BinaryPipeline));
     if (op == NULL)
         return PyErr_NoMemory();
     PyObject_Init((PyObject*)op, &PyThunkBinaryPipeline_Type);
     op->function = function;
-    op->base_function = base_function;
     Py_XINCREF(left);
     op->left = left;
     Py_XINCREF(right);

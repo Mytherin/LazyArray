@@ -16,9 +16,11 @@ PyMODINIT_FUNC initthunklib(void);
 PyMODINIT_FUNC initthunklib(void)
 {   
     PyThunk_Init();
-    initialize_thunk_as_number();
     initialize_thunk_methods();
-    
+    initialize_ufunc_pipeline();
+    initialize_operators();
+    initialize_thunkops();
+
     //initialize module
     PyObject *m = Py_InitModule3("thunklib", module_methods, module_docstring);
     if (m == NULL)

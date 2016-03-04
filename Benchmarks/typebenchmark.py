@@ -6,8 +6,8 @@ import thunklib
 element_count = 100000000
 
 numpy.random.seed(137)
-a = numpy.random.randint(0,100,element_count).astype(numpy.int32)
-b = numpy.random.randint(0,100,element_count).astype(numpy.float32)
+a = numpy.random.randint(0,100,element_count).astype(numpy.float64)
+b = numpy.random.randint(0,100,element_count).astype(numpy.float64)
 
 start = time.time()
 d = a * b
@@ -18,8 +18,8 @@ print("NumPy Evaluation", end - start)
 
 numpy.random.seed(137)
 
-a = thunklib.thunk(numpy.random.randint(0,100,element_count).astype(numpy.int32))
-b = thunklib.thunk(numpy.random.randint(0,100,element_count).astype(numpy.float32))
+a = thunklib.thunk(numpy.random.randint(0,100,element_count).astype(numpy.float64))
+b = thunklib.thunk(numpy.random.randint(0,100,element_count).astype(numpy.float64))
 
 start = time.time()
 d = a * b

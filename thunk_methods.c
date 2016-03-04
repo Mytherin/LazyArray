@@ -2,7 +2,7 @@
 #include "thunk.h"
 #include "thunktypes.h"
 
-
+/*
 static ssize_t PyObject_Cardinality(PyObject *v) {
 	if (PyThunk_CheckExact(v)) {
 		return PyThunk_Cardinality(v);
@@ -28,6 +28,7 @@ thunk_lazy##function(PyObject *self, PyObject *unused) {                        
 }
 
 thunk_unary_pipeline_function(sqrt)
+*/
 
 static PyObject *
 _thunk_evaluate(PyThunkObject *self, PyObject *args) {
@@ -49,7 +50,7 @@ _thunk_isevaluated(PyThunkObject *self, PyObject *args) {
 }
 
 struct PyMethodDef thunk_methods[] = {
-    {"sqrt", (PyCFunction)thunk_lazysqrt, METH_NOARGS,"sqrt() => "},
+    /*{"sqrt", (PyCFunction)thunk_lazysqrt, METH_NOARGS,"sqrt() => "},*/
     {"evaluate", (PyCFunction)_thunk_evaluate, METH_NOARGS,"evaluate() => "},
     {"isevaluated", (PyCFunction)_thunk_isevaluated, METH_NOARGS,"isevaluated() => "},
     {NULL}  /* Sentinel */

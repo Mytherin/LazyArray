@@ -1,43 +1,5 @@
 
-#include "thunk.h"
-#include "thunktypes.h"
-#include "initializers.h"
-
-static ssize_t PyObject_Cardinality(PyObject *v) {
-	if (PyThunk_CheckExact(v)) {
-		return PyThunk_Cardinality(v);
-	}
-	return 1;
-}
-
-static int PyObject_ctype(PyObject* v) {
-	if (PyThunk_CheckExact(v)) {
-		return PyThunk_Type(v);
-	}
-	return NPY_INT32;
-}
-
-#define thunk_operator(operator)                                                                      \
-static PyObject*                                                                                      \
-thunk_lazy##operator(PyObject *v, PyObject *w) {                                                      \
-	ssize_t left_cardinality = PyObject_Cardinality(v);                                               \
-	ssize_t right_cardinality = PyObject_Cardinality(w);                                              \
-	ssize_t cardinality;                                                                              \
-	if (left_cardinality != right_cardinality && left_cardinality > 1 && right_cardinality > 1) {     \
-        PyErr_SetString(PyExc_TypeError, "Invalid cardinalities.");                                   \
-        return NULL;                                                                                  \
-	}                                                                                                 \
-	cardinality = max(left_cardinality, right_cardinality);                                           \
-	int type = StandardBinaryTypeResolution(PyObject_ctype(v), PyObject_ctype(w));                    \
-	PyObject *op = PyThunkBinaryPipeline_FromFunction(pipeline_##operator, v, w, PyArray_Type.tp_as_number->nb_##operator); \
-	return PyThunk_FromExactOperation(op, cardinality, type);                                         \
-}
-
-thunk_operator(multiply)
-thunk_operator(add)
-thunk_operator(subtract)
-thunk_operator(divide)
-
+#include "generated/thunk_lazy_functions.h"
 
 PyNumberMethods thunk_as_number = {
     (binaryfunc)thunk_lazyadd,   /*nb_add*/
@@ -80,7 +42,3 @@ PyNumberMethods thunk_as_number = {
     0,                           /* nb_inplace_true_divide */
     0,          /* nb_index */
 };
-
-void initialize_thunk_as_number(void) {
-    import_array();
-}

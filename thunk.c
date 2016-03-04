@@ -1,6 +1,8 @@
 
 #include "thunk.h"
 
+//static void PyThunk_CreateStorage(PyThunkObject *thunk);
+
 PyObject* 
 PyThunk_Evaluate(PyThunkObject *thunk) {
 	if (PyThunk_IsEvaluated(thunk)) {
@@ -13,15 +15,6 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 	} else if (PyThunkUnaryFunction_CheckExact(thunk->operation)) {
 		PyThunkOperation_UnaryFunction *operation = (PyThunkOperation_UnaryFunction*)thunk->operation;
 		UnaryFunction function = (UnaryFunction)(operation->function);
-		if (thunk->type < 0) {
-			PyObject *result = operation->base_function(PyThunk_AsArray(operation->left), NULL);
-			if (result == NULL) {
-				return NULL;
-			}
-			thunk->storage = (PyArrayObject*)PyArray_FromAny(result, NULL, 0, 0,  NPY_ARRAY_C_CONTIGUOUS, NULL);
-			thunk->evaluated = 1;
-			Py_RETURN_NONE;
-		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
 			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
@@ -38,15 +31,6 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 	} else if (PyThunkBinaryFunction_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryFunction *operation = (PyThunkOperation_BinaryFunction*)thunk->operation;
 		BinaryFunction function = (BinaryFunction)(operation->function);
-		if (thunk->type < 0) {
-			PyObject *result = operation->base_function(PyThunk_AsArray(operation->left), PyThunk_AsArray(operation->right));
-			if (result == NULL) {
-				return NULL;
-			}
-			thunk->storage = (PyArrayObject*)PyArray_FromAny(result, NULL, 0, 0,  NPY_ARRAY_C_CONTIGUOUS, NULL);
-			thunk->evaluated = 1;
-			Py_RETURN_NONE;
-		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
 			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
@@ -71,17 +55,12 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
     size_t end = min((block + 1) * BLOCK_SIZE, thunk->cardinality);
 
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation)) {
+        PyArrayObject *arrays[NPY_MAXARGS];
+        for (size_t i = 0; i < NPY_MAXARGS; ++i) {
+            arrays[i] = NULL;
+        }
 		PyThunkOperation_UnaryPipeline *operation = (PyThunkOperation_UnaryPipeline*)thunk->operation;
 		UnaryPipelineFunction function = (UnaryPipelineFunction)(operation->function);
-		if (thunk->type < 0) {
-			PyObject *result = operation->base_function(PyThunk_AsArray(operation->left), NULL);
-			if (result == NULL) {
-				return NULL;
-			}
-			thunk->storage = (PyArrayObject*)PyArray_FromAny(result, NULL, 0, 0,  NPY_ARRAY_C_CONTIGUOUS, NULL);
-			thunk->evaluated = 1;
-			Py_RETURN_NONE;
-		}
 		if (PyThunk_CheckExact(operation->left)) {
 			PyThunk_EvaluateBlock((PyThunkObject*)operation->left, block);
 		}
@@ -97,20 +76,17 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), start, end, PyThunk_Type(operation->left));
+        arrays[0] = (PyArrayObject*) PyThunk_AsArray(operation->left);
+        arrays[1] = thunk->storage;
+		function(arrays, start, end);
 		PyBlockMask_SetBlock(thunk->blockmask, block);
 	} else if (PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
+        PyArrayObject *arrays[NPY_MAXARGS];
+        for (size_t i = 0; i < NPY_MAXARGS; ++i) {
+            arrays[i] = NULL;
+        }
 		PyThunkOperation_BinaryPipeline *operation = (PyThunkOperation_BinaryPipeline*)thunk->operation;
 		BinaryPipelineFunction function = (BinaryPipelineFunction)(operation->function);
-		if (thunk->type < 0) {
-			PyObject *result = operation->base_function(PyThunk_AsArray(operation->left), PyThunk_AsArray(operation->right));
-			if (result == NULL) {
-				return NULL;
-			}
-			thunk->storage = (PyArrayObject*)PyArray_FromAny(result, NULL, 0, 0,  NPY_ARRAY_C_CONTIGUOUS, NULL);
-			thunk->evaluated = 1;
-			Py_RETURN_NONE;
-		}
 		if (PyThunk_CheckExact(operation->left)) {
 			PyThunk_EvaluateBlock((PyThunkObject*)operation->left, block);
 		}
@@ -127,7 +103,10 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), PyThunk_GetData(operation->right), start, end, PyThunk_Type(operation->left), PyThunk_Type(operation->right));
+        arrays[0] = (PyArrayObject*) PyThunk_AsArray(operation->left);
+        arrays[1] = (PyArrayObject*) PyThunk_AsArray(operation->right);
+        arrays[2] = thunk->storage;
+		function(arrays, start, end);
 		PyBlockMask_SetBlock(thunk->blockmask, block);
 	} else {
 		PyThunk_Evaluate(thunk);
@@ -136,7 +115,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 }
 
 PyObject*
-PyThunk_FromExactOperation(PyObject *operation, ssize_t cardinality, int type) {
+PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type) {
 	register PyThunkObject *thunk;
 
     thunk = (PyThunkObject *)PyObject_MALLOC(sizeof(PyThunkObject));
@@ -148,8 +127,12 @@ PyThunk_FromExactOperation(PyObject *operation, ssize_t cardinality, int type) {
     thunk->operation = (PyThunkOperation*)operation;
     thunk->cardinality = cardinality;
     thunk->type = type;
-    thunk->options = THUNK_CARDINALITY_EXACT;
-    thunk->blockmask = PyBlockMask_FromBlocks(cardinality / BLOCK_SIZE + 1);
+    thunk->options |= cardinality_type;
+    if (cardinality_type == THUNK_CARDINALITY_EXACT) {
+        thunk->blockmask = PyBlockMask_FromBlocks(cardinality / BLOCK_SIZE + 1);
+    } else {
+        thunk->blockmask = NULL;
+    }
     return (PyObject*)thunk;
 }
 
@@ -171,15 +154,19 @@ PyThunk_FromArray(PyObject *unused, PyObject *input) {
     thunk->cardinality =  PyArray_SIZE(thunk->storage);
     thunk->type = PyArray_TYPE(thunk->storage);
     thunk->options = THUNK_CARDINALITY_EXACT;
+    thunk->blockmask = NULL;
     return (PyObject*)thunk;
 }
 
 PyObject*
 PyThunk_AsArray(PyObject* thunk) {
-	if (PyThunk_Evaluate((PyThunkObject*)thunk) == NULL) {
-		return NULL;
-	}
-	return (PyObject*)((PyThunkObject*)thunk)->storage;
+    if (PyThunk_CheckExact(thunk)) {
+        if (PyThunk_Evaluate((PyThunkObject*)thunk) == NULL) {
+            return NULL;
+        }
+        return (PyObject*)((PyThunkObject*)thunk)->storage;
+    }
+    return PyArray_FromAny(thunk, NULL, 0, 0, 0, NULL);
 }
 
 bool
