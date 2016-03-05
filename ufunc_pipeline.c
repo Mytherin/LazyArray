@@ -44,7 +44,7 @@ int PyUFunc_PipelinedFunction(PyUFuncObject *ufunc, PyArrayObject **args, size_t
     npy_intp elements[1] = { end - start };
     for(i = 0; i < nop; ++i) {
         Py_XINCREF(PyArray_DESCR(args[i]));
-        op[i] = (PyArrayObject*) PyArray_NewFromDescr(&PyArray_Type, PyArray_DESCR(args[i]), 1, elements, NULL, (void*)(PyArray_DATA(args[i]) + start), NPY_ARRAY_CARRAY | !NPY_ARRAY_OWNDATA, NULL);
+        op[i] = (PyArrayObject*) PyArray_NewFromDescr(&PyArray_Type, PyArray_DESCR(args[i]), 1, elements, NULL, (void*)(PyArray_BYTES(args[i]) + start * PyArray_DESCR(args[i])->elsize), NPY_ARRAY_CARRAY | !NPY_ARRAY_OWNDATA, NULL);
         if (PyArray_TYPE(args[i]) != dtypes[i]->type_num) {
             PyArrayObject *converted = (PyArrayObject*) PyArray_CastToType(op[i], dtypes[i], 0);
             Py_XDECREF(op[i]);

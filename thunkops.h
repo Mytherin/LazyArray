@@ -12,7 +12,7 @@ extern "C" {
 #include <numpy/arrayobject.h>
 
 
-#define BLOCK_SIZE 10000
+extern size_t BLOCK_SIZE;
 
 typedef void (*UnaryPipelineFunction)(PyArrayObject **, size_t start, size_t end);
 typedef void (*BinaryPipelineFunction)(PyArrayObject **, size_t start, size_t end);
