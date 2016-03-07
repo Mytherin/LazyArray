@@ -11,6 +11,12 @@ PyBlockMask *PyBlockMask_FromBlocks(size_t block_count) {
 	return mask;
 }
 
+void PyBlockMask_Destroy(PyBlockMask *mask) {
+    if (mask) {
+        free(mask);
+    }
+}
+
 void PyBlockMask_SetBlock(PyBlockMask *mask, size_t block) {
 	size_t offset = block / 32;
 	size_t block_number = block - (offset * 32);

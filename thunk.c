@@ -9,7 +9,8 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 		Py_RETURN_NONE;
 	}
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation) || PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
-		for(size_t i = 0; i < PyBlockMask_BlockCount(thunk->blockmask); i++) {
+        size_t blocks = PyBlockMask_BlockCount(thunk->blockmask);
+		for(size_t i = 0; i < blocks; i++) {
 			PyThunk_EvaluateBlock(thunk, i);
 		}
 	} else if (PyThunkUnaryFunction_CheckExact(thunk->operation)) {
@@ -28,6 +29,7 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 			}
 		}
 		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left));
+        PyThunk_FinalizeEvaluation(thunk);
 	} else if (PyThunkBinaryFunction_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryFunction *operation = (PyThunkOperation_BinaryFunction*)thunk->operation;
 		BinaryFunction function = (BinaryFunction)(operation->function);
@@ -42,6 +44,7 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 			}
 		}
 		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), PyThunk_GetData(operation->right));
+        PyThunk_FinalizeEvaluation(thunk);
 	}
 	Py_RETURN_NONE;
 }
@@ -56,9 +59,6 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation)) {
         PyArrayObject *arrays[NPY_MAXARGS];
-        for (size_t i = 0; i < NPY_MAXARGS; ++i) {
-            arrays[i] = NULL;
-        }
 		PyThunkOperation_UnaryPipeline *operation = (PyThunkOperation_UnaryPipeline*)thunk->operation;
 		UnaryPipelineFunction function = (UnaryPipelineFunction)(operation->function);
 		if (PyThunk_CheckExact(operation->left)) {
@@ -66,25 +66,24 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				// the referenced object has only one reference (from here)
 				// this means it will get destroyed after this operation
 				// since it has the same type, we can use its storage directly
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
+                Py_INCREF(((PyThunkObject*)operation->left)->storage);
 			} else {
 				// we have to create storage for the operation
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-        arrays[0] = (PyArrayObject*) PyThunk_AsArray(operation->left);
+        arrays[0] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->left);
         arrays[1] = thunk->storage;
 		function(arrays, start, end);
 		PyBlockMask_SetBlock(thunk->blockmask, block);
+        PyThunk_FinalizeEvaluation(thunk);
 	} else if (PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
         PyArrayObject *arrays[NPY_MAXARGS];
-        for (size_t i = 0; i < NPY_MAXARGS; ++i) {
-            arrays[i] = NULL;
-        }
 		PyThunkOperation_BinaryPipeline *operation = (PyThunkOperation_BinaryPipeline*)thunk->operation;
 		BinaryPipelineFunction function = (BinaryPipelineFunction)(operation->function);
 		if (PyThunk_CheckExact(operation->left)) {
@@ -95,23 +94,40 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-			} else if (PyThunk_CheckExact(operation->right) && operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
+                Py_INCREF(((PyThunkObject*)operation->left)->storage);
+			} else if (PyThunk_MatchingStorage(thunk, operation->right)) {
 				thunk->storage = ((PyThunkObject*)operation->right)->storage;
+                Py_INCREF(((PyThunkObject*)operation->right)->storage);
 			} else {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-        arrays[0] = (PyArrayObject*) PyThunk_AsArray(operation->left);
-        arrays[1] = (PyArrayObject*) PyThunk_AsArray(operation->right);
+        arrays[0] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->left);
+        arrays[1] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->right);
         arrays[2] = thunk->storage;
 		function(arrays, start, end);
 		PyBlockMask_SetBlock(thunk->blockmask, block);
+        PyThunk_FinalizeEvaluation(thunk);
 	} else {
 		PyThunk_Evaluate(thunk);
 	}
+
 	Py_RETURN_NONE;
+}
+
+
+void
+PyThunk_FinalizeEvaluation(PyThunkObject *thunk) {
+    if (PyThunk_IsEvaluated(thunk)) {
+        Py_XDECREF(thunk->operation);
+        PyBlockMask_Destroy(thunk->blockmask);
+
+        thunk->operation = NULL;
+        thunk->blockmask = NULL;
+        thunk->evaluated = true;
+    }
 }
 
 PyObject*
@@ -195,13 +211,20 @@ thunk_str(PyThunkObject *self)
     return PyArray_Type.tp_str((PyObject*)self->storage);
 }
 
+static void
+PyThunk_dealloc(PyThunkObject* self)
+{
+    Py_XDECREF(self->operation);
+    PyBlockMask_Destroy(self->blockmask);
+    self->ob_type->tp_free((PyObject*)self);
+}
 
 PyTypeObject PyThunk_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "thunk",
     sizeof(PyThunkObject),
     0,
-    0,                                          /* tp_dealloc */
+    (destructor)PyThunk_dealloc,                /* tp_dealloc */
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */

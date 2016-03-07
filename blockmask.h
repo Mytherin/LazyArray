@@ -15,6 +15,8 @@ typedef struct {
 
 // Create a block mask from the specified amount of blocks
 PyBlockMask *PyBlockMask_FromBlocks(size_t block_count);
+// Deallocates the specified blockmask
+void PyBlockMask_Destroy(PyBlockMask *mask);
 // Evaluates a specified block
 void PyBlockMask_SetBlock(PyBlockMask *mask, size_t block);
 // Returns true if a specific block has been evaluated, and false otherwise
