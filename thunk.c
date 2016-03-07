@@ -94,7 +94,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 		}
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (PyThunk_MatchingStorage(thunk, operation->left)) {
+		    if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
                 Py_INCREF(((PyThunkObject*)operation->left)->storage);
 			} else if (PyThunk_MatchingStorage(thunk, operation->right)) {
@@ -243,6 +243,7 @@ static void
 PyThunk_dealloc(PyThunkObject* self)
 {
     Py_XDECREF(self->operation);
+    Py_XDECREF(self->storage);
     PyBlockMask_Destroy(self->blockmask);
     self->ob_type->tp_free((PyObject*)self);
 }
