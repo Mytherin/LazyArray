@@ -93,10 +93,10 @@ int %s_resolve_types(PyArrayObject **args, PyArray_Descr **out_types) {
 	return PyUFunc_ResolveTypes(%s_ufunc, args, out_types);
 }
 """ % (operatorname, operatorname))
-	f2.write('int %s_resolve_cardinality(PyArrayObject **args, ssize_t *cardinality, ssize_t *cardinality_type);\n' % operatorname)
+	f2.write('int %s_resolve_cardinality(size_t left_cardinality, size_t right_cardinality, ssize_t *cardinality, ssize_t *cardinality_type);\n' % operatorname)
 	f.write("""
-int %s_resolve_cardinality(PyArrayObject **args, ssize_t *cardinality, ssize_t *cardinality_type) {
-	return generic_binary_cardinality_resolver(args, cardinality, cardinality_type);
+int %s_resolve_cardinality(size_t left_cardinality, size_t right_cardinality, ssize_t *cardinality, ssize_t *cardinality_type) {
+	return generic_binary_cardinality_resolver(left_cardinality, right_cardinality, cardinality, cardinality_type);
 }
 """ % operatorname)
 	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
@@ -112,10 +112,10 @@ PyObject *thunk_lazy%s(PyObject *v, PyObject *w) {
 		types[i] = NULL;
 		args[i] = NULL;
 	}
-	args[0] = (PyArrayObject*) PyThunk_AsArray(v);
-	args[1] = (PyArrayObject*) PyThunk_AsArray(w);
+	args[0] = (PyArrayObject*) PyThunk_AsTypeArray(v);
+	args[1] = (PyArrayObject*) PyThunk_AsTypeArray(w);
 	%s_resolve_types(args, types);
-	%s_resolve_cardinality(args, &cardinality, &cardinality_type);
+	%s_resolve_cardinality(PyThunk_Cardinality(v), PyThunk_Cardinality(w), &cardinality, &cardinality_type);
 	PyObject *op = PyThunkBinaryPipeline_FromFunction(pipeline_%s, v, w);
 	return PyThunk_FromOperation(op, cardinality, cardinality_type, types[0]->type_num);
 }

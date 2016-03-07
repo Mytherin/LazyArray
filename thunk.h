@@ -40,15 +40,22 @@ PyObject* PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block);
 bool PyThunk_IsEvaluated(PyThunkObject *thunk);
 // Returns true if the specified block of the thunk has been evaluated, and false otherwise
 bool PyThunk_IsEvaluatedBlock(PyThunkObject *thunk, size_t block);
+// If the thunk is fully evaluated, finalize the evaluation (destroy the operation object and blockmask)
+void PyThunk_FinalizeEvaluation(PyThunkObject *thunk);
 
 #define PyThunk_DATA(obj) PyArray_DATA(((PyThunkObject*)obj)->storage)
 #define PyThunk_GetData(obj) PyThunk_DATA(obj)
 #define PyThunk_Cardinality(obj) ((PyThunkObject*)obj)->cardinality
 #define PyThunk_Type(obj) ((PyThunkObject*)obj)->type
 
+#define PyThunk_MatchingStorage(thunk, other) (PyThunk_CheckExact(other) && other->ob_refcnt == 1 && ((PyThunkObject*)other)->type == thunk->type && ((PyThunkObject*)other)->cardinality == thunk->cardinality)
+
 PyObject *PyThunk_AsArray(PyObject*);
+PyObject *PyThunk_AsUnevaluatedArray(PyObject* thunk);
+PyObject *PyThunk_AsTypeArray(PyObject *thunk);
 PyObject *PyThunk_FromArray(PyObject *, PyObject*);
 PyObject *PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
+
 
 void PyThunk_Init(void);
 

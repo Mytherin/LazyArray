@@ -174,6 +174,9 @@ PyThunk_FromArray(PyObject *unused, PyObject *input) {
     return (PyObject*)thunk;
 }
 
+
+static PyObject* _thunk_arrays[255];
+
 PyObject*
 PyThunk_AsArray(PyObject* thunk) {
     if (PyThunk_CheckExact(thunk)) {
@@ -181,6 +184,28 @@ PyThunk_AsArray(PyObject* thunk) {
             return NULL;
         }
         return (PyObject*)((PyThunkObject*)thunk)->storage;
+    }
+    return PyArray_FromAny(thunk, NULL, 0, 0, 0, NULL);
+}
+
+
+PyObject*
+PyThunk_AsUnevaluatedArray(PyObject* thunk) {
+    if (PyThunk_CheckExact(thunk)) {
+        if (((PyThunkObject*)thunk)->storage == NULL) {
+            ((PyThunkObject*)thunk)->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { ((PyThunkObject*)thunk)->cardinality }, ((PyThunkObject*)thunk)->type, 0);
+        }
+        return (PyObject*)((PyThunkObject*)thunk)->storage;
+    }
+    return PyArray_FromAny(thunk, NULL, 0, 0, 0, NULL);
+}
+
+PyObject*
+PyThunk_AsTypeArray(PyObject *thunk) {
+    if (PyThunk_CheckExact(thunk)) {
+        PyObject *type = (_thunk_arrays[((PyThunkObject*)thunk)->type]);
+        Py_INCREF(type);
+        return type;
     }
     return PyArray_FromAny(thunk, NULL, 0, 0, 0, NULL);
 }
@@ -196,9 +221,12 @@ PyThunk_IsEvaluatedBlock(PyThunkObject *thunk, size_t block) {
 }
 
 void PyThunk_Init() {
+    import_array();
     if (PyType_Ready(&PyThunk_Type) < 0)
         return;
-    import_array();
+    for(int i = 0; i < 255; i++) {
+        _thunk_arrays[i] = PyArray_EMPTY(1, (npy_intp[1]) { 1 }, i, 0);
+    }
 }
 
 

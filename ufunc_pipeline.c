@@ -41,6 +41,7 @@ int PyUFunc_PipelinedFunction(PyUFuncObject *ufunc, PyArrayObject **args, size_t
         goto fail;
     }
 
+
     npy_intp elements[1] = { end - start };
     for(i = 0; i < nop; ++i) {
         Py_XINCREF(PyArray_DESCR(args[i]));
