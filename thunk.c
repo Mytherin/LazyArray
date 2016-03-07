@@ -1,8 +1,6 @@
 
 #include "thunk.h"
 
-//static void PyThunk_CreateStorage(PyThunkObject *thunk);
-
 PyObject* 
 PyThunk_Evaluate(PyThunkObject *thunk) {
 	if (PyThunk_IsEvaluated(thunk)) {

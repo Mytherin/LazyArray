@@ -65,6 +65,7 @@ typedef struct {
 PyAPI_DATA(PyTypeObject) PyThunkBinaryFunction_Type;
 
 int generic_binary_cardinality_resolver(size_t left_cardinality, size_t right_cardinality, ssize_t *cardinality, ssize_t *cardinality_type);
+int generic_unary_cardinality_resolver(size_t left_cardinality, ssize_t *cardinality, ssize_t *cardinality_type);
 
 #define PyThunkOperation_Check(op) ((op)->ob_type == &PyThunkOperation_Type)
 

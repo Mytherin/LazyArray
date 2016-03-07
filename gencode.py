@@ -102,6 +102,7 @@ int %s_resolve_cardinality(size_t left_cardinality, size_t right_cardinality, ss
 	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
 	variables.append('PyUFuncObject *%s_ufunc = NULL;\n' % operatorname)
 	f4.write('\t%s_ufunc = (PyUFuncObject*) PyDict_GetItemString(dd, "%s");\n' % (operatorname,operatorname))
+	f4.write('\tif (%s_ufunc == NULL) { printf("Failed to load %s.\\n"); }\n' % (operatorname, operatorname))
 	f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % operatorname)
 	f6.write("""
 PyObject *thunk_lazy%s(PyObject *v, PyObject *w) {
@@ -124,10 +125,67 @@ PyObject *thunk_lazy%s(PyObject *v, PyObject *w) {
 
 f3.write('\n/* binary operations */\n')
 f4.write('\n\t/* binary operations */\n')
-generate_binary_pipeline_operator('multiply')
-generate_binary_pipeline_operator('add')
-generate_binary_pipeline_operator('subtract')
-generate_binary_pipeline_operator('divide')
+
+# todo: inplace functions -> 'inplace_add', 'inplace_subtract', 'inplace_multiply', 'inplace_divide', 'inplace_remainder', 'inplace_power', 'inplace_lshift', 'inplace_rshift', 'inplace_and', 'inplace_xor', 'inplace_or','inplace_floor_divide', 'inplace_true_divide'
+# todo: divmod: 'divmod' (not a ufunc)
+
+binary_operations = ['multiply', 'add', 'subtract', 'divide', 'remainder', 'power', 'left_shift', 'right_shift', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'floor_divide', 'true_divide']
+
+for op in binary_operations:
+	generate_binary_pipeline_operator(op)
+
+
+def generate_unary_pipeline_operator(operatorname):
+	f.write('\n/* %s */\n'% operatorname)
+	f2.write('\n/* %s */\n'% operatorname)
+	f2.write('void pipeline_%s(PyArrayObject **args, size_t start, size_t end);\n' % operatorname)
+	f.write("""
+void pipeline_%s(PyArrayObject **args, size_t start, size_t end) {
+	PyUFunc_PipelinedFunction(%s_ufunc, args, start, end);
+}
+""" % (operatorname, operatorname))
+	f2.write('int %s_resolve_types(PyArrayObject **args, PyArray_Descr **out_types);\n' % operatorname)
+	f.write("""
+int %s_resolve_types(PyArrayObject **args, PyArray_Descr **out_types) {
+	return PyUFunc_ResolveTypes(%s_ufunc, args, out_types);
+}
+""" % (operatorname, operatorname))
+	f2.write('int %s_resolve_cardinality(size_t left_cardinality, ssize_t *cardinality, ssize_t *cardinality_type);\n' % operatorname)
+	f.write("""
+int %s_resolve_cardinality(size_t left_cardinality, ssize_t *cardinality, ssize_t *cardinality_type) {
+	return generic_unary_cardinality_resolver(left_cardinality, cardinality, cardinality_type);
+}
+""" % operatorname)
+	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
+	variables.append('PyUFuncObject *%s_ufunc = NULL;\n' % operatorname)
+	f4.write('\t%s_ufunc = (PyUFuncObject*) PyDict_GetItemString(dd, "%s");\n' % (operatorname,operatorname))
+	f4.write('\tif (%s_ufunc == NULL) { printf("Failed to load %s.\\n"); }\n' % (operatorname, operatorname))
+	f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % operatorname)
+	f6.write("""
+PyObject *thunk_lazy%s(PyObject *v, PyObject *unused) {
+	PyArrayObject *args[NPY_MAXARGS];
+	PyArray_Descr *types[NPY_MAXARGS];
+	ssize_t cardinality, cardinality_type;
+	(void) unused;
+	for(size_t i = 0; i < NPY_MAXARGS; i++) {
+		types[i] = NULL;
+		args[i] = NULL;
+	}
+	args[0] = (PyArrayObject*) PyThunk_AsTypeArray(v);
+	%s_resolve_types(args, types);
+	%s_resolve_cardinality(PyThunk_Cardinality(v), &cardinality, &cardinality_type);
+	PyObject *op = PyThunkUnaryPipeline_FromFunction(pipeline_%s, v);
+	return PyThunk_FromOperation(op, cardinality, cardinality_type, types[0]->type_num);
+}
+""" % (operatorname, operatorname, operatorname, operatorname))
+
+#todo: positive, hex, oct
+
+single_operations = ['negative', 'absolute', 'nonzero', 'invert', 'int', 'long', 'float', 'sqrt']
+
+
+for op in single_operations:
+	generate_unary_pipeline_operator(op)
 
 
 f5.write('\n#endif\n')

@@ -13,6 +13,12 @@ int generic_binary_cardinality_resolver(size_t left_cardinality, size_t right_ca
     return -1;
 }
 
+int generic_unary_cardinality_resolver(size_t left_cardinality, ssize_t *cardinality, ssize_t *cardinality_type) {
+    *cardinality = left_cardinality;
+    *cardinality_type = THUNK_CARDINALITY_EXACT;
+    return 1;
+}
+
 void initialize_thunkops(void) {
     import_array();
 }
