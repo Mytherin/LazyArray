@@ -41,12 +41,18 @@ int PyUFunc_PipelinedFunction(PyUFuncObject *ufunc, PyArrayObject **args, size_t
         goto fail;
     }
 
-
-    npy_intp elements[1] = { end - start };
     for(i = 0; i < nop; ++i) {
-        Py_XINCREF(PyArray_DESCR(args[i]));
-        op[i] = (PyArrayObject*) PyArray_NewFromDescr(&PyArray_Type, PyArray_DESCR(args[i]), 1, elements, NULL, (void*)(PyArray_BYTES(args[i]) + start * PyArray_DESCR(args[i])->elsize), NPY_ARRAY_CARRAY | !NPY_ARRAY_OWNDATA, NULL);
+        size_t size = PyArray_SIZE(args[i]);
+        if (size > 1) {
+            npy_intp elements[1] = { end - start };
+            Py_XINCREF(PyArray_DESCR(args[i]));
+            op[i] = (PyArrayObject*) PyArray_NewFromDescr(&PyArray_Type, PyArray_DESCR(args[i]), 1, elements, NULL, (void*)(PyArray_BYTES(args[i]) + start * PyArray_DESCR(args[i])->elsize), NPY_ARRAY_CARRAY | !NPY_ARRAY_OWNDATA, NULL);
+        } else {
+            Py_XINCREF(args[i]);
+            op[i] = args[i];
+        }
         if (PyArray_TYPE(args[i]) != dtypes[i]->type_num) {
+            assert(i < nin); // Casting makes no sense for output arrays, only for input arrays. If we have to cast the output array something went wrong
             PyArrayObject *converted = (PyArrayObject*) PyArray_CastToType(op[i], dtypes[i], 0);
             Py_XDECREF(op[i]);
             op[i] = converted;

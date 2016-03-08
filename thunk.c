@@ -202,8 +202,10 @@ PyThunk_AsUnevaluatedArray(PyObject* thunk) {
 PyObject*
 PyThunk_AsTypeArray(PyObject *thunk) {
     if (PyThunk_CheckExact(thunk)) {
+        if (PyThunk_IsEvaluated(thunk)) {
+            return ((PyThunkObject*)thunk)->storage;
+        }
         PyObject *type = (_thunk_arrays[((PyThunkObject*)thunk)->type]);
-        Py_INCREF(type);
         return type;
     }
     return PyArray_FromAny(thunk, NULL, 0, 0, 0, NULL);
