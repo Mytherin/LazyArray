@@ -154,7 +154,8 @@ PyObject*
 PyThunk_FromArray(PyObject *unused, PyObject *input) {
     register PyThunkObject *thunk;
     (void) unused;
-    if (!PyArray_CheckExact(input)) {
+    input = PyArray_FromAny(input, NULL, 0, 0, NPY_ARRAY_ENSURECOPY, NULL);
+    if (input == NULL || !PyArray_CheckExact(input)) {
         PyErr_SetString(PyExc_TypeError, "Expected a NumPy array as parameter.");
         return NULL;
     }
@@ -162,7 +163,7 @@ PyThunk_FromArray(PyObject *unused, PyObject *input) {
     if (thunk == NULL)
         return PyErr_NoMemory();
     PyObject_Init((PyObject*)thunk, &PyThunk_Type);
-    thunk->storage = (PyArrayObject*) PyArray_FromAny(input, NULL, 0, 0, NPY_ARRAY_ENSURECOPY, NULL);
+    thunk->storage = (PyArrayObject*) input;
     thunk->evaluated = true;
     thunk->operation = NULL;
     thunk->cardinality =  PyArray_SIZE(thunk->storage);
