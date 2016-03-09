@@ -181,7 +181,7 @@ PyObject *thunk_lazy%s(PyObject *v, PyObject *unused) {
 
 #todo: positive, hex, oct
 
-single_operations = ['negative', 'absolute', 'nonzero', 'invert', 'int', 'long', 'float', 'sqrt']
+single_operations = ['negative', 'absolute', 'invert', 'int', 'long', 'float', 'sqrt']
 
 
 for op in single_operations:

@@ -1,5 +1,38 @@
 
 #include "generated/thunk_lazy_functions.h"
+#include "thunk.h"
+
+static PyObject *
+_thunk_lazypower_wrapper(PyThunkObject *a1, PyObject *o2, PyObject *NPY_UNUSED(modulo))
+{
+    return thunk_lazypower((PyObject*) a1, o2);
+}
+
+
+
+static int
+_thunk_nonzero(PyThunkObject *mp)
+{
+    npy_intp n;
+
+    n = PyThunk_Cardinality(mp);
+    if (n == 1) {
+        PyThunk_Evaluate(mp);
+        return PyArray_DESCR(mp->storage)->f->nonzero(PyArray_DATA(mp->storage), mp->storage);
+    }
+    else if (n == 0) {
+        return 0;
+    }
+    else {
+        PyErr_SetString(PyExc_ValueError,
+                        "The truth value of an array " \
+                        "with more than one element is ambiguous. " \
+                        "Use a.any() or a.all()");
+        return -1;
+    }
+}
+
+
 
 PyNumberMethods thunk_as_number = {
     (binaryfunc)thunk_lazyadd,   /*nb_add*/
@@ -8,11 +41,11 @@ PyNumberMethods thunk_as_number = {
     (binaryfunc)thunk_lazydivide,         /*nb_divide*/
     (binaryfunc)thunk_lazyremainder,         /*nb_remainder*/
     0,         /*nb_divmod*/
-    (binaryfunc)thunk_lazypower,         /*nb_power*/
+    (ternaryfunc)_thunk_lazypower_wrapper,         /*nb_power*/
     (unaryfunc)thunk_lazynegative,         /*nb_negative*/
     0,         /*nb_positive*/
     (unaryfunc)thunk_lazyabsolute,         /*nb_absolute*/
-    (unaryfunc)thunk_lazynonzero,         /*nb_nonzero*/
+    (inquiry)_thunk_nonzero,         /*nb_nonzero*/
     (unaryfunc)thunk_lazyinvert,         /*nb_invert*/
     (binaryfunc)thunk_lazyleft_shift,         /*nb_lshift*/
     (binaryfunc)thunk_lazyright_shift,         /*nb_rshift*/

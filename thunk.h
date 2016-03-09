@@ -8,6 +8,7 @@ extern "C" {
 #include "blockmask.h"
 #include "thunkops.h"
 
+
 #define PyThunk_HEAD     \
 	PyObject_HEAD        \
 	ssize_t cardinality; \
@@ -20,7 +21,7 @@ typedef struct {
     PyArrayObject *storage;
     // flag that indicates whether or not the array is evaluated
     bool evaluated;
-    // the operation that can be called to materialize the array
+    // the operation that can be called to materialitze the array
 	PyThunkOperation *operation;
 	// contains information on which blocks are and are not evaluated
 	PyBlockMask *blockmask;

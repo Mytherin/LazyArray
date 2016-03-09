@@ -1,5 +1,6 @@
 
 #include "thunk.h"
+#include "ufunc_pipeline.h"
 
 PyObject* 
 PyThunk_Evaluate(PyThunkObject *thunk) {
@@ -202,8 +203,8 @@ PyThunk_AsUnevaluatedArray(PyObject* thunk) {
 PyObject*
 PyThunk_AsTypeArray(PyObject *thunk) {
     if (PyThunk_CheckExact(thunk)) {
-        if (PyThunk_IsEvaluated(thunk)) {
-            return ((PyThunkObject*)thunk)->storage;
+        if (PyThunk_IsEvaluated((PyThunkObject*)thunk)) {
+            return (PyObject*) ((PyThunkObject*)thunk)->storage;
         }
         PyObject *type = (_thunk_arrays[((PyThunkObject*)thunk)->type]);
         return type;

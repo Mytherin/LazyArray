@@ -24,10 +24,19 @@ _thunk_isevaluated(PyThunkObject *self, PyObject *args) {
     Py_RETURN_FALSE;
 }
 
+static PyObject *
+_thunk_asarray(PyThunkObject *self, PyObject *args) {
+    (void) args;
+    PyObject *arr = PyThunk_AsArray((PyObject*) self);
+    Py_INCREF(arr);
+    return arr;
+}
+
 struct PyMethodDef thunk_methods[] = {
     {"sqrt", (PyCFunction)thunk_lazysqrt, METH_NOARGS,"sqrt() => "},
     {"evaluate", (PyCFunction)_thunk_evaluate, METH_NOARGS,"evaluate() => "},
     {"isevaluated", (PyCFunction)_thunk_isevaluated, METH_NOARGS,"isevaluated() => "},
+    {"asnumpyarray", (PyCFunction)_thunk_asarray, METH_NOARGS,"asnumpyarray() => "},
     {NULL}  /* Sentinel */
 };
 
