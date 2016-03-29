@@ -34,6 +34,7 @@ _thunk_asarray(PyThunkObject *self, PyObject *args) {
 
 struct PyMethodDef thunk_methods[] = {
     {"sqrt", (PyCFunction)thunk_lazysqrt, METH_NOARGS,"sqrt() => "},
+    {"sort", (PyCFunction)thunk_lazysort, METH_NOARGS, "sort() =>"},
     {"evaluate", (PyCFunction)_thunk_evaluate, METH_NOARGS,"evaluate() => "},
     {"isevaluated", (PyCFunction)_thunk_isevaluated, METH_NOARGS,"isevaluated() => "},
     {"asnumpyarray", (PyCFunction)_thunk_asarray, METH_NOARGS,"asnumpyarray() => "},

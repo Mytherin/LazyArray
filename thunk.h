@@ -51,13 +51,15 @@ void PyThunk_FinalizeEvaluation(PyThunkObject *thunk);
 
 #define PyThunk_MatchingStorage(thunk, other) (PyThunk_CheckExact(other) && other->ob_refcnt == 1 && ((PyThunkObject*)other)->type == thunk->type && ((PyThunkObject*)other)->cardinality == thunk->cardinality)
 
+PyArrayObject* PyArrayObject_Block(PyArrayObject *array, size_t start, size_t end);
+
 PyObject *PyThunk_AsArray(PyObject*);
 PyObject *PyThunk_AsUnevaluatedArray(PyObject* thunk);
 PyObject *PyThunk_AsTypeArray(PyObject *thunk);
 PyObject *PyThunk_FromArray(PyObject *, PyObject*);
 PyObject *PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
-
-
+PyObject *PyThunk_Copy(PyThunkObject *original);
+void PyThunk_FromOperation_Inplace(PyThunkObject *thunk, PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
 void PyThunk_Init(void);
 
 PyNumberMethods thunk_as_number;

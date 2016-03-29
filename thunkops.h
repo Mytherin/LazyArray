@@ -85,6 +85,8 @@ int generic_unary_cardinality_resolver(size_t left_cardinality, ssize_t *cardina
 
 PyObject* PyThunkUnaryPipeline_FromFunction(UnaryPipelineFunction function, PyObject *left);
 PyObject* PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right);
+PyObject* PyThunkUnaryFunction_FromFunction(UnaryFunction function, PyObject *left);
+PyObject* PyThunkBinaryFunction_FromFunction(BinaryFunction function, PyObject *left, PyObject *right);
 
 #ifdef __cplusplus
 }

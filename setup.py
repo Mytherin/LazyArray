@@ -21,7 +21,7 @@ setup(
     author='Mark Raasveldt',
     ext_modules=[Extension(
         name=package_name,
-        depends=['blockmask.h', 'thunk.h', 'thunktypes.h', 'thunkops.h', 'thunk_config.h', 'thunktypes.h', 'ufunc_pipeline.h'] + generated_headers,
-        sources=['blockmask.c', 'thunk.c', 'thunkpackage.c', 'thunk_as_number.c', 'thunkops.c', 'thunk_binarypipeline.c', 'thunk_unarypipeline.c', 'thunk_binaryfunction.c', 'thunk_unaryfunction.c', 'thunk_methods.c', 'ufunc_pipeline.c'] + generated_sources
+        depends=['blockmask.h', 'thunk.h', 'thunktypes.h', 'thunkops.h', 'thunk_config.h', 'thunk_sort.h', 'thunktypes.h', 'ufunc_pipeline.h'] + generated_headers,
+        sources=['blockmask.c', 'thunk.c', 'thunkpackage.c', 'thunk_as_number.c', 'thunkops.c', 'thunk_binarypipeline.c', 'thunk_sort.c', 'thunk_unarypipeline.c', 'thunk_binaryfunction.c', 'thunk_unaryfunction.c', 'thunk_methods.c', 'ufunc_pipeline.c'] + generated_sources
         )])
 

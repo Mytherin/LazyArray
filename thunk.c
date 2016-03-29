@@ -151,6 +151,24 @@ PyThunk_FinalizeEvaluation(PyThunkObject *thunk) {
 }
 
 PyObject*
+PyThunk_Copy(PyThunkObject *original) {
+    register PyThunkObject *thunk;
+
+    thunk = (PyThunkObject *)PyObject_MALLOC(sizeof(PyThunkObject));
+    if (thunk == NULL)
+        return PyErr_NoMemory();
+    PyObject_Init((PyObject*)thunk, &PyThunk_Type);
+    thunk->storage = original->storage;
+    thunk->evaluated = original->evaluated;
+    thunk->operation = original->operation;
+    thunk->cardinality = original->cardinality;
+    thunk->type = original->type;
+    thunk->options = original->options;
+    thunk->blockmask = original->blockmask;
+    return (PyObject*)thunk;
+}
+
+PyObject*
 PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type) {
 	register PyThunkObject *thunk;
 
@@ -158,6 +176,12 @@ PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_
     if (thunk == NULL)
         return PyErr_NoMemory();
     PyObject_Init((PyObject*)thunk, &PyThunk_Type);
+    PyThunk_FromOperation_Inplace(thunk, operation, cardinality, cardinality_type, type);
+    return (PyObject*)thunk;
+}
+
+void
+PyThunk_FromOperation_Inplace(PyThunkObject *thunk, PyObject *operation, ssize_t cardinality, int cardinality_type, int type) {
     thunk->storage = NULL;
     thunk->evaluated = false;
     thunk->operation = (PyThunkOperation*)operation;
@@ -169,7 +193,13 @@ PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_
     } else {
         thunk->blockmask = NULL;
     }
-    return (PyObject*)thunk;
+}
+
+PyArrayObject*
+PyArrayObject_Block(PyArrayObject *array, size_t start, size_t end) {
+    Py_INCREF(PyArray_DESCR(array));
+    npy_intp elements[1] = { end - start };
+    return (PyArrayObject*) PyArray_NewFromDescr(&PyArray_Type, PyArray_DESCR(array), 1, elements, NULL, (void*)(PyArray_BYTES(array) + start * PyArray_DESCR(array)->elsize), NPY_ARRAY_CARRAY | !NPY_ARRAY_OWNDATA, NULL);
 }
 
 PyObject*

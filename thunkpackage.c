@@ -20,6 +20,7 @@ PyMODINIT_FUNC initthunklib(void)
     initialize_ufunc_pipeline();
     initialize_operators();
     initialize_thunkops();
+    initialize_sort();
 
     //initialize module
     PyObject *m = Py_InitModule3("thunklib", module_methods, module_docstring);

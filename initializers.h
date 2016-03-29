@@ -7,5 +7,6 @@ void initialize_thunk_methods(void);
 void initialize_ufunc_pipeline(void);
 void initialize_thunkops(void);
 void initialize_operators(void);
+void initialize_sort(void);
 
 #endif
