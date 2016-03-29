@@ -188,6 +188,32 @@ for op in single_operations:
 	generate_unary_pipeline_operator(op)
 
 
+
+LAZY_OP = 1
+PIPELINE_UNARY = 2
+FUNCTION_UNARY = 3
+FUNCTION_BINARY = 4
+
+# headers are only added to the headers; their implementation is not generated but made manually implemented in one of the *.c files
+header_operations = [('sort', LAZY_OP), ('blocksort', PIPELINE_UNARY), ('mergesort', FUNCTION_UNARY)]
+
+def add_header_wrapper(operatorname, headertype):
+	if headertype == LAZY_OP:
+		f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % (operatorname))
+	if headertype == PIPELINE_UNARY:
+		f2.write('\n/* %s */\nvoid pipeline_%s(PyArrayObject **args, size_t start, size_t end);\n' % (operatorname,operatorname))
+	if headertype == FUNCTION_UNARY:
+		f2.write('\n/* %s */\nvoid unary_%s(PyArrayObject **args);\n' % (operatorname,operatorname))
+	if headertype == FUNCTION_BINARY:
+		f2.write('\n/* %s */\nvoid binary_%s(PyArrayObject **args);\n' % (operatorname,operatorname))
+
+
+
+
+for tpl in header_operations:
+	add_header_wrapper(tpl[0], tpl[1])
+
+
 f5.write('\n#endif\n')
 f4.write('}\n')
 for variable in variables:

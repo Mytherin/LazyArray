@@ -178,6 +178,13 @@ unique
 
 First compute unique on pipeline chunks, then compute unique on the resulting set of unique values. So each pipe generates a set of unique values in the pipe, that is at most as big as the pipe itself. Then we perform unique on the entirety of those values. 
 
+mean
+nanmean
+average
+
+--Axis Aggregations--
+amin, amax, nanmin, nanmax, ptp
+
 --Logic Functions--
 allclose
 array_equal
@@ -220,6 +227,15 @@ cumsum
 
 Every value relies on the previous value. Cumsum is [1, 2, 3, 4] => [1, 3, 6, 10]. We might be able to do semi-pipelines. Suppose two blocks: [1,2] [3,4], we can first compute [1, 3] [3, 7]. Then we add +3 to every element in the second block.
 
+median
+std
+var
+nanmedian
+nanstd
+nanvar
+percentile
+nanpercentile
+
 
 # Not sure
 gradient -> don't think this is pipelinable, it has something to do with the derivative
@@ -228,9 +244,23 @@ i0 -> Bessel function, wh atever that may be
 conj -> complex conjugate, probably not
 convolve -> probably not
 interp -> Probably not
+correlate -> probably partially
+corrcoef -> yes?
+covariance -> partially?
+
+# Statistical operations
+histogram -> yes
+histogram2d -> yes
+histogramdd -> yes
+bincount -> yes
+digitize -> yes
+
+
+# Matrix Operations
+dot, matmul (matrix multiplication)
+vdot
 
 
 
 TODO: 
 Linear Algebra: http://docs.scipy.org/doc/numpy/reference/routines.linalg.html
-Statistics: http://docs.scipy.org/doc/numpy/reference/routines.statistics.html

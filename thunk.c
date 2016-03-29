@@ -15,13 +15,17 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 	} else if (PyThunkUnaryFunction_CheckExact(thunk->operation)) {
 		PyThunkOperation_UnaryFunction *operation = (PyThunkOperation_UnaryFunction*)thunk->operation;
 		UnaryFunction function = (UnaryFunction)(operation->function);
+        if (PyThunk_CheckExact(operation->left)) {
+            PyThunk_Evaluate((PyThunkObject*)operation->left);
+        }
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				// the referenced object has only one reference (from here)
 				// this means it will get destroyed after this operation
 				// since it has the same type, we can use its storage directly
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
+                Py_INCREF(thunk->storage);
 			} else {
 				// we have to create storage for the operation
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
@@ -32,12 +36,20 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 	} else if (PyThunkBinaryFunction_CheckExact(thunk->operation)) {
 		PyThunkOperation_BinaryFunction *operation = (PyThunkOperation_BinaryFunction*)thunk->operation;
 		BinaryFunction function = (BinaryFunction)(operation->function);
+        if (PyThunk_CheckExact(operation->left)) {
+            PyThunk_Evaluate((PyThunkObject*)operation->left);
+        }
+        if (PyThunk_CheckExact(operation->right)) {
+            PyThunk_Evaluate((PyThunkObject*)operation->right);
+        }
 		if (thunk->storage == NULL) {
 			// no storage, have to obtain storage from somewhere
-			if (PyThunk_CheckExact(operation->left) && operation->left->ob_refcnt == 1 && ((PyThunkObject*)operation->left)->type == thunk->type) {
+			if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-			} else if (PyThunk_CheckExact(operation->right) && operation->right->ob_refcnt == 1 && ((PyThunkObject*)operation->right)->type == thunk->type) {
+                Py_INCREF(thunk->storage);
+			} else if (PyThunk_MatchingStorage(thunk, operation->right)) {
 				thunk->storage = ((PyThunkObject*)operation->right)->storage;
+                Py_INCREF(thunk->storage);
 			} else {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
@@ -70,7 +82,7 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 				// this means it will get destroyed after this operation
 				// since it has the same type, we can use its storage directly
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-                Py_INCREF(((PyThunkObject*)operation->left)->storage);
+                Py_INCREF(thunk->storage);
 			} else {
 				// we have to create storage for the operation
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
@@ -95,10 +107,10 @@ PyThunk_EvaluateBlock(PyThunkObject *thunk, size_t block) {
 			// no storage, have to obtain storage from somewhere
 		    if (PyThunk_MatchingStorage(thunk, operation->left)) {
 				thunk->storage = ((PyThunkObject*)operation->left)->storage;
-                Py_INCREF(((PyThunkObject*)operation->left)->storage);
+                Py_INCREF(thunk->storage);
 			} else if (PyThunk_MatchingStorage(thunk, operation->right)) {
 				thunk->storage = ((PyThunkObject*)operation->right)->storage;
-                Py_INCREF(((PyThunkObject*)operation->right)->storage);
+                Py_INCREF(thunk->storage);
 			} else {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}

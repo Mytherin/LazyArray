@@ -8,8 +8,6 @@ _thunk_lazypower_wrapper(PyThunkObject *a1, PyObject *o2, PyObject *NPY_UNUSED(m
     return thunk_lazypower((PyObject*) a1, o2);
 }
 
-
-
 static int
 _thunk_nonzero(PyThunkObject *mp)
 {
@@ -31,8 +29,6 @@ _thunk_nonzero(PyThunkObject *mp)
         return -1;
     }
 }
-
-
 
 PyNumberMethods thunk_as_number = {
     (binaryfunc)thunk_lazyadd,   /*nb_add*/
