@@ -75,6 +75,7 @@ f6.write("""
 #include "thunkops_pipeline.h"
 #include "../thunkops.h"
 #include "../thunk.h"
+#include "../ufunc_pipeline.h"
 """)
 
 
@@ -187,6 +188,23 @@ single_operations = ['negative', 'absolute', 'invert', 'int', 'long', 'float', '
 for op in single_operations:
 	generate_unary_pipeline_operator(op)
 
+def generate_cumulative_aggregation(operatorname,ufunc):
+	f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % operatorname)
+	f6.write("""
+PyObject *thunk_lazy%s(PyObject *v, PyObject *unused) {
+	PyArray_Descr *type;
+	ssize_t cardinality = 1;
+	ssize_t cardinality_type = THUNK_CARDINALITY_EXACT;
+	PyReduceFunc_ResolveTypes(%s_ufunc, (PyArrayObject*) PyThunk_AsTypeArray(v), &type);
+	PyObject *op = PyThunkAggregationPipeline_FromFunction(%s_ufunc, v);
+	return PyThunk_FromOperation(op, cardinality, cardinality_type, type->type_num);
+}
+""" % (operatorname, ufunc, ufunc))
+
+cumulative_aggregations = { 'sum': 'add' }
+
+for op,ufunc in cumulative_aggregations.iteritems():
+	generate_cumulative_aggregation(op,ufunc)
 
 
 LAZY_OP = 1
@@ -206,9 +224,6 @@ def add_header_wrapper(operatorname, headertype):
 		f2.write('\n/* %s */\nvoid unary_%s(PyArrayObject **args);\n' % (operatorname,operatorname))
 	if headertype == FUNCTION_BINARY:
 		f2.write('\n/* %s */\nvoid binary_%s(PyArrayObject **args);\n' % (operatorname,operatorname))
-
-
-
 
 for tpl in header_operations:
 	add_header_wrapper(tpl[0], tpl[1])

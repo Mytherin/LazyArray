@@ -18,6 +18,9 @@ extern "C" {
 
 int PyUFunc_ResolveTypes(PyUFuncObject *ufunc, PyArrayObject **op, PyArray_Descr **out_type);
 int PyUFunc_PipelinedFunction(PyUFuncObject *ufunc, PyArrayObject **args, size_t start, size_t end);
+int PyReduceFunc_ResolveTypes(PyUFuncObject *ufunc, PyArrayObject *arr, PyArray_Descr **out_dtype);
+int PyReduceFunc_Execute(PyUFuncObject *ufunc, PyArrayObject *array, PyObject **out);
+int PyReduceFunc_ExecuteBlock(PyUFuncObject *ufunc, PyArrayObject *array, PyObject **out, size_t start, size_t end);
 
 #ifdef __cplusplus
 }

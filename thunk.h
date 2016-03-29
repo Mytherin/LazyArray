@@ -59,8 +59,12 @@ PyObject *PyThunk_AsTypeArray(PyObject *thunk);
 PyObject *PyThunk_FromArray(PyObject *, PyObject*);
 PyObject *PyThunk_FromOperation(PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
 PyObject *PyThunk_Copy(PyThunkObject *original);
+ssize_t PyThunk_BlockCount(PyThunkObject *thunk);
 void PyThunk_FromOperation_Inplace(PyThunkObject *thunk, PyObject *operation, ssize_t cardinality, int cardinality_type, int type);
 void PyThunk_Init(void);
+
+void* PyArray_BlockPointer(PyArrayObject *array, size_t block);
+void* PyArray_ElementPointer(PyArrayObject *array, size_t element);
 
 PyNumberMethods thunk_as_number;
 extern struct PyMethodDef thunk_methods[];

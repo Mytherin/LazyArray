@@ -8,7 +8,7 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 		Py_RETURN_NONE;
 	}
 	if (PyThunkUnaryPipeline_CheckExact(thunk->operation) || PyThunkBinaryPipeline_CheckExact(thunk->operation)) {
-        size_t blocks = PyBlockMask_BlockCount(thunk->blockmask);
+        size_t blocks = PyThunk_BlockCount(thunk);
 		for(size_t i = 0; i < blocks; i++) {
 			PyThunk_EvaluateBlock(thunk, i);
 		}
@@ -65,7 +65,30 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 		function(arrays);
         thunk->evaluated = true;
         PyThunk_FinalizeEvaluation(thunk);
-	}
+	} else if (PyThunkAggregationPipeline_CheckExact(thunk->operation)) {
+        PyThunkOperation_AggregationPipeline *operation = (PyThunkOperation_AggregationPipeline*)thunk->operation;
+        size_t blocks = PyThunk_BlockCount((PyThunkObject*)operation->left);
+        PyObject *list = PyList_New(blocks);
+        PyObject *result = NULL;
+        PyArrayObject *array;
+        for(size_t i = 0; i < blocks; i++) {
+            size_t start = i * BLOCK_SIZE;
+            size_t end = min((i + 1) * BLOCK_SIZE, ((PyThunkObject*)operation->left)->cardinality);
+
+            PyThunk_EvaluateBlock((PyThunkObject*)operation->left, i);
+            PyReduceFunc_ExecuteBlock(operation->function, ((PyThunkObject*)operation->left)->storage, &result, start, end);
+            if (result == NULL) {
+                return NULL;
+            }
+            PyList_SetItem(list, i, result);
+        }
+        array = (PyArrayObject*) PyArray_FromAny(list, NULL, 0, 0, 0, NULL);
+        PyReduceFunc_Execute(operation->function, array, &result);
+        Py_DECREF(array);
+        Py_DECREF(list);
+
+        thunk->storage = (PyArrayObject*) PyArray_FromAny(result, NULL, 0, 0, 0, NULL);
+    }
 	Py_RETURN_NONE;
 }
 
@@ -225,6 +248,25 @@ PyThunk_FromArray(PyObject *unused, PyObject *input) {
     return (PyObject*)thunk;
 }
 
+ssize_t 
+PyThunk_BlockCount(PyThunkObject *thunk) {
+    if (thunk->blockmask == NULL) {
+        return thunk->cardinality / BLOCK_SIZE + 1;
+    }
+    return PyBlockMask_BlockCount(thunk->blockmask);
+}
+
+void*
+PyArray_BlockPointer(PyArrayObject *array, size_t block) {
+    size_t start = block * BLOCK_SIZE;
+    return PyArray_ElementPointer(array, start);
+}
+
+void* 
+PyArray_ElementPointer(PyArrayObject *array, size_t element) {
+    char *data = PyArray_BYTES(array);
+    return (void*) (data + element * PyArray_DESCR(array)->elsize);
+}
 
 static PyObject* _thunk_arrays[255];
 

@@ -12,7 +12,21 @@ generated_headers = ['generated/operations.h', 'generated/thunk_lazy_functions.h
 
 from os import environ
 
-environ['CFLAGS'] = (environ['CFLAGS'] if 'CFLAGS' in environ else '') + '-Wno-unused-function'
+debug = False
+import sys
+for v in sys.argv:
+    if 'debug' in v:
+        debug = True
+        sys.argv.remove(v)
+        break
+
+if debug:
+    environ['CFLAGS'] = (environ['CFLAGS'] if 'CFLAGS' in environ else '') + '-Wall -Wno-unused-function -O0 -g'
+else:
+    environ['CFLAGS'] = (environ['CFLAGS'] if 'CFLAGS' in environ else '') + '-Wno-unused-function'
+
+import numpy
+
 
 setup(
     name=package_name,
@@ -21,7 +35,8 @@ setup(
     author='Mark Raasveldt',
     ext_modules=[Extension(
         name=package_name,
+        include_dirs=[numpy.get_include()],
         depends=['blockmask.h', 'thunk.h', 'thunktypes.h', 'thunkops.h', 'thunk_config.h', 'thunk_sort.h', 'thunktypes.h', 'ufunc_pipeline.h'] + generated_headers,
-        sources=['blockmask.c', 'thunk.c', 'thunkpackage.c', 'thunk_as_number.c', 'thunkops.c', 'thunk_binarypipeline.c', 'thunk_sort.c', 'thunk_unarypipeline.c', 'thunk_binaryfunction.c', 'thunk_unaryfunction.c', 'thunk_methods.c', 'ufunc_pipeline.c'] + generated_sources
+        sources=['blockmask.c', 'thunk.c', 'thunkpackage.c', 'thunk_as_number.c', 'thunkops.c', 'thunk_binarypipeline.c', 'thunk_sort.c', 'thunk_aggregationpipeline.c', 'thunk_unarypipeline.c', 'thunk_binaryfunction.c', 'thunk_unaryfunction.c', 'thunk_methods.c', 'ufunc_pipeline.c'] + generated_sources
         )])
 

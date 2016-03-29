@@ -82,11 +82,13 @@ int generic_unary_cardinality_resolver(size_t left_cardinality, ssize_t *cardina
 #define PyThunkBinaryPipeline_CheckExact(op) ((op)->ob_type == &PyThunkBinaryPipeline_Type)
 #define PyThunkUnaryFunction_CheckExact(op) ((op)->ob_type == &PyThunkUnaryFunction_Type)
 #define PyThunkBinaryFunction_CheckExact(op) ((op)->ob_type == &PyThunkBinaryFunction_Type)
+#define PyThunkAggregationPipeline_CheckExact(op) ((op)->ob_type == &PyThunkAggregationPipeline_Type)
 
 PyObject* PyThunkUnaryPipeline_FromFunction(UnaryPipelineFunction function, PyObject *left);
 PyObject* PyThunkBinaryPipeline_FromFunction(BinaryPipelineFunction function, PyObject *left, PyObject *right);
 PyObject* PyThunkUnaryFunction_FromFunction(UnaryFunction function, PyObject *left);
 PyObject* PyThunkBinaryFunction_FromFunction(BinaryFunction function, PyObject *left, PyObject *right);
+PyObject* PyThunkAggregationPipeline_FromFunction(PyUFuncObject *function, PyObject *left);
 
 #ifdef __cplusplus
 }
