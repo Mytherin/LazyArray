@@ -17,8 +17,8 @@ extern size_t BLOCK_SIZE;
 
 typedef void (*UnaryPipelineFunction)(PyArrayObject **, size_t start, size_t end);
 typedef void (*BinaryPipelineFunction)(PyArrayObject **, size_t start, size_t end);
-typedef void (*UnaryFunction)(void *storage, void *a);
-typedef void (*BinaryFunction)(void *storage, void *a, void *b);
+typedef void (*UnaryFunction)(PyArrayObject **);
+typedef void (*BinaryFunction)(PyArrayObject **);
 
 #define PyThunkOps_HEAD           \
 	PyObject_HEAD              \

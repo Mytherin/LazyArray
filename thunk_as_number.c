@@ -3,14 +3,12 @@
 #include "thunk.h"
 
 static PyObject *
-_thunk_lazypower_wrapper(PyThunkObject *a1, PyObject *o2, PyObject *NPY_UNUSED(modulo))
-{
+_thunk_lazypower_wrapper(PyThunkObject *a1, PyObject *o2, PyObject *NPY_UNUSED(modulo)) {
     return thunk_lazypower((PyObject*) a1, o2);
 }
 
 static int
-_thunk_nonzero(PyThunkObject *mp)
-{
+_thunk_nonzero(PyThunkObject *mp) {
     npy_intp n;
 
     n = PyThunk_Cardinality(mp);

@@ -13,6 +13,7 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 			PyThunk_EvaluateBlock(thunk, i);
 		}
 	} else if (PyThunkUnaryFunction_CheckExact(thunk->operation)) {
+        PyArrayObject *arrays[NPY_MAXARGS];
 		PyThunkOperation_UnaryFunction *operation = (PyThunkOperation_UnaryFunction*)thunk->operation;
 		UnaryFunction function = (UnaryFunction)(operation->function);
         if (PyThunk_CheckExact(operation->left)) {
@@ -31,9 +32,13 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left));
+        arrays[0] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->left);
+        arrays[1] = thunk->storage;
+        function(arrays);
+        thunk->evaluated = true;
         PyThunk_FinalizeEvaluation(thunk);
 	} else if (PyThunkBinaryFunction_CheckExact(thunk->operation)) {
+        PyArrayObject *arrays[NPY_MAXARGS];
 		PyThunkOperation_BinaryFunction *operation = (PyThunkOperation_BinaryFunction*)thunk->operation;
 		BinaryFunction function = (BinaryFunction)(operation->function);
         if (PyThunk_CheckExact(operation->left)) {
@@ -54,7 +59,11 @@ PyThunk_Evaluate(PyThunkObject *thunk) {
 				thunk->storage = (PyArrayObject*)PyArray_EMPTY(1, (npy_intp[1]) { thunk->cardinality }, thunk->type, 0);
 			}
 		}
-		function(PyThunk_GetData(thunk), PyThunk_GetData(operation->left), PyThunk_GetData(operation->right));
+        arrays[0] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->left);
+        arrays[1] = (PyArrayObject*) PyThunk_AsUnevaluatedArray(operation->right);
+        arrays[2] = thunk->storage;
+		function(arrays);
+        thunk->evaluated = true;
         PyThunk_FinalizeEvaluation(thunk);
 	}
 	Py_RETURN_NONE;
