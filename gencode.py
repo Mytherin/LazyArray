@@ -79,6 +79,12 @@ f6.write("""
 """)
 
 
+def load_ufunc(operatorname):
+	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
+	variables.append('PyUFuncObject *%s_ufunc = NULL;\n' % operatorname)
+	f4.write('\t%s_ufunc = (PyUFuncObject*) PyDict_GetItemString(dd, "%s");\n' % (operatorname,operatorname))
+	f4.write('\tif (%s_ufunc == NULL) { printf("Failed to load %s.\\n"); }\n' % (operatorname, operatorname))
+
 def generate_binary_pipeline_operator(operatorname):
 	f.write('\n/* %s */\n'% operatorname)
 	f2.write('\n/* %s */\n'% operatorname)
@@ -100,10 +106,7 @@ int %s_resolve_cardinality(size_t left_cardinality, size_t right_cardinality, ss
 	return generic_binary_cardinality_resolver(left_cardinality, right_cardinality, cardinality, cardinality_type);
 }
 """ % operatorname)
-	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
-	variables.append('PyUFuncObject *%s_ufunc = NULL;\n' % operatorname)
-	f4.write('\t%s_ufunc = (PyUFuncObject*) PyDict_GetItemString(dd, "%s");\n' % (operatorname,operatorname))
-	f4.write('\tif (%s_ufunc == NULL) { printf("Failed to load %s.\\n"); }\n' % (operatorname, operatorname))
+	load_ufunc(operatorname)
 	f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % operatorname)
 	f6.write("""
 PyObject *thunk_lazy%s(PyObject *v, PyObject *w) {
@@ -157,10 +160,7 @@ int %s_resolve_cardinality(size_t left_cardinality, ssize_t *cardinality, ssize_
 	return generic_unary_cardinality_resolver(left_cardinality, cardinality, cardinality_type);
 }
 """ % operatorname)
-	f3.write('extern PyUFuncObject *%s_ufunc;\n' % operatorname)
-	variables.append('PyUFuncObject *%s_ufunc = NULL;\n' % operatorname)
-	f4.write('\t%s_ufunc = (PyUFuncObject*) PyDict_GetItemString(dd, "%s");\n' % (operatorname,operatorname))
-	f4.write('\tif (%s_ufunc == NULL) { printf("Failed to load %s.\\n"); }\n' % (operatorname, operatorname))
+	load_ufunc(operatorname)
 	f5.write('PyObject *thunk_lazy%s(PyObject *v, PyObject *w);\n' % operatorname)
 	f6.write("""
 PyObject *thunk_lazy%s(PyObject *v, PyObject *unused) {
@@ -213,7 +213,7 @@ FUNCTION_UNARY = 3
 FUNCTION_BINARY = 4
 
 # headers are only added to the headers; their implementation is not generated but made manually implemented in one of the *.c files
-header_operations = [('sort', LAZY_OP), ('blocksort', PIPELINE_UNARY), ('mergesort', FUNCTION_UNARY)]
+header_operations = [('sort', LAZY_OP), ('blocksort', PIPELINE_UNARY), ('mergesort', FUNCTION_UNARY), ('sort', FUNCTION_UNARY)]
 
 def add_header_wrapper(operatorname, headertype):
 	if headertype == LAZY_OP:
@@ -227,7 +227,6 @@ def add_header_wrapper(operatorname, headertype):
 
 for tpl in header_operations:
 	add_header_wrapper(tpl[0], tpl[1])
-
 
 f5.write('\n#endif\n')
 f4.write('}\n')

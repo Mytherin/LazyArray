@@ -7,33 +7,59 @@
 
 #include "thunk.h"
 
-static int
-DOUBLE_merge_arrays(npy_double *left, npy_double *right, size_t left_size, size_t right_size, npy_double *result) {
-    npy_double *left_end = left + left_size;
-    npy_double *right_end = right + right_size;
-    // first merge the two arrays until either of the arrays runs out of values
-    while (left < left_end && right < right_end) {
-        if (*left < *right) {
-            *result++ = *left++;
-        }
-        else {
-            *result++ = *right++;
-        }
-    }
-    // copy the remaining values from the array that has not run out of values
-    if (right < right_end) {
-        left = right;
-        left_end = right_end;
-    } 
-    memcpy(result, left, sizeof(npy_double) * (left_end - left));
-    return 1;
+#define MERGE_ARRAYS(nptpe, npdefine)                                                                                       \
+static int                                                                                                                  \
+npdefine##_merge_arrays(nptpe *left, nptpe *right, size_t left_size, size_t right_size, nptpe *result) {                    \
+    nptpe *left_end = left + left_size;                                                                                     \
+    nptpe *right_end = right + right_size;                                                                                  \
+    /* first merge the two arrays until either of the arrays runs out of values */                                          \
+    while (left < left_end && right < right_end) {                                                                          \
+        if (*left < *right) {                                                                                               \
+            *result++ = *left++;                                                                                            \
+        }                                                                                                                   \
+        else {                                                                                                              \
+            *result++ = *right++;                                                                                           \
+        }                                                                                                                   \
+    }                                                                                                                       \
+    /* copy the remaining values from the array that has not run out of values */                                           \
+    if (right < right_end) {                                                                                                \
+        left = right;                                                                                                       \
+        left_end = right_end;                                                                                               \
+    }                                                                                                                       \
+    memcpy(result, left, sizeof(nptpe) * (left_end - left));                                                                \
+    return 1;                                                                                                               \
 }
+
+#define NPY_FUNC_TYPE_CASE(nptpe, npdefine, function)                                                                       \
+    case npdefine:                                                                                                          \
+        return npdefine##_##function((nptpe*) left, (nptpe*) right, left_size, right_size, (nptpe*) result);
+
+MERGE_ARRAYS(npy_int8, NPY_INT8)
+MERGE_ARRAYS(npy_int16, NPY_INT16)
+MERGE_ARRAYS(npy_int32, NPY_INT32)
+MERGE_ARRAYS(npy_int64, NPY_INT64)
+MERGE_ARRAYS(npy_uint8, NPY_UINT8)
+MERGE_ARRAYS(npy_uint16, NPY_UINT16)
+MERGE_ARRAYS(npy_uint32, NPY_UINT32)
+MERGE_ARRAYS(npy_uint64, NPY_UINT64)
+MERGE_ARRAYS(npy_float, NPY_FLOAT)
+MERGE_ARRAYS(npy_double, NPY_DOUBLE)
+
+
 
 int
 merge_arrays(void *left, void *right, size_t left_size, size_t right_size, void *result, int typenum) {
     switch(typenum) {
-        case NPY_DOUBLE:
-            return DOUBLE_merge_arrays((npy_double*) left, (npy_double*) right, left_size, right_size, (npy_double*) result);
+        NPY_FUNC_TYPE_CASE(npy_uint8, NPY_UINT8, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_uint16, NPY_UINT16, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_uint32, NPY_UINT32, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_uint64, NPY_UINT64, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_int8, NPY_INT8, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_int16, NPY_INT16, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_int32, NPY_INT32, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_int64, NPY_INT64, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_float, NPY_FLOAT, merge_arrays)
+        NPY_FUNC_TYPE_CASE(npy_double, NPY_DOUBLE, merge_arrays)
         default:
             return -1;
     }
@@ -41,18 +67,14 @@ merge_arrays(void *left, void *right, size_t left_size, size_t right_size, void 
 
 PyObject*
 PyArrayObject_Merge(PyArrayObject *a, PyArrayObject *b, PyArray_Descr *out_type) {
-    if (out_type->type_num != NPY_DOUBLE) {
-        // only double supported now
-        return NULL;
-    }
     Py_INCREF(a);
     Py_INCREF(b);
-    if (PyArray_DESCR(a)->type_num != NPY_DOUBLE) {
+    if (PyArray_DESCR(a)->type_num != out_type->type_num) {
         PyArrayObject *converted = (PyArrayObject*) PyArray_CastToType(a, out_type, 0);
         Py_DECREF(a);
         a = converted;
     }
-    if (PyArray_DESCR(b)->type_num != NPY_DOUBLE) {
+    if (PyArray_DESCR(b)->type_num != out_type->type_num) {
         PyArrayObject *converted = (PyArrayObject*) PyArray_CastToType(b, out_type, 0);
         Py_DECREF(b);
         b = converted;
@@ -65,7 +87,13 @@ PyArrayObject_Merge(PyArrayObject *a, PyArrayObject *b, PyArray_Descr *out_type)
     Py_INCREF(out_type);
     PyObject *result = PyArray_Empty(1, elements, out_type, 0);
 
-    DOUBLE_merge_arrays(PyArray_DATA(a), PyArray_DATA(b), left_size, right_size, PyArray_DATA((PyArrayObject*)result));
+    int ret = merge_arrays(PyArray_DATA(a), PyArray_DATA(b), left_size, right_size, PyArray_DATA((PyArrayObject*)result), out_type->type_num);
+    if (ret < 0) {
+        PyErr_Format(PyExc_TypeError, "Unsupported output typenum %d.", out_type->type_num);
+        Py_DECREF(result);
+        result = NULL;
+    }
+
     Py_DECREF(a);
     Py_DECREF(b);
     return result;
@@ -129,6 +157,27 @@ void unary_mergesort(PyArrayObject **args) {
     recursive_merge(PyArray_BYTES(args[1]), BLOCK_SIZE, PyArray_SIZE(args[1]), PyArray_DESCR(args[1])->elsize, PyArray_DESCR(args[1])->type_num);
 }
 
+void unary_sort(PyArrayObject **args) {
+    PyArrayObject *in = args[0];
+    PyArrayObject *out = args[1];
+    void *inptr = PyArray_DATA(args[0]);
+    void *outptr = PyArray_DATA(args[1]);
+    PyArray_Descr *descr = PyArray_DESCR(args[1]);
+    // the sort function we are calling is an in-place sort, so if the input and output data is different we first have to copy the data to the new location
+    if (inptr != outptr) {
+        PyArray_CopyInto(out, in);
+    }
+    if (descr->f->sort[0] != NULL) {
+        // call the actual sort function
+        descr->f->sort[0]((void*)(PyArray_BYTES(args[1])), PyArray_SIZE(out), NULL);        
+    } else {
+        int retval = PyArray_Sort(out, 0, NPY_QUICKSORT);
+        if (retval < 0) {
+            printf("Failure");
+        }
+    }
+}
+
 PyObject *thunk_lazysort(PyObject *v, PyObject *unused) {
     PyArrayObject *args[NPY_MAXARGS];
     PyArray_Descr *types[NPY_MAXARGS];
@@ -150,14 +199,22 @@ PyObject *thunk_lazysort(PyObject *v, PyObject *unused) {
     types[0] = PyArray_DESCR(args[0]);
     sqrt_resolve_cardinality(PyThunk_Cardinality(v), &cardinality, &cardinality_type);
 
-    PyObject *copy = (PyObject*) PyThunk_Copy((PyThunkObject*) v);
-    PyObject *blocksort = PyThunkUnaryPipeline_FromFunction(pipeline_blocksort, copy);
-    PyObject *initial_thunk = PyThunk_FromOperation(blocksort, cardinality, cardinality_type, types[0]->type_num);
-    PyObject *merge = PyThunkUnaryFunction_FromFunction(unary_mergesort, initial_thunk);
-    PyThunk_FromOperation_Inplace((PyThunkObject*) v, merge, cardinality, cardinality_type, types[0]->type_num);
+    //we only sort the pipeline merge sort for scalar types (int, float, uint, etc), for complex types/strings just call the NumPy sort function
+    if (!PyArray_ScalarType(types[0]->type_num)) {
+        PyObject *copy = (PyObject*) PyThunk_Copy((PyThunkObject*) v);
+        PyObject *merge = PyThunkUnaryFunction_FromFunction(unary_sort, copy);
+        PyThunk_FromOperation_Inplace((PyThunkObject*) v, merge, cardinality, cardinality_type, types[0]->type_num);
+    } else {
+        PyObject *copy = (PyObject*) PyThunk_Copy((PyThunkObject*) v);
+        PyObject *blocksort = PyThunkUnaryPipeline_FromFunction(pipeline_blocksort, copy);
+        PyObject *initial_thunk = PyThunk_FromOperation(blocksort, cardinality, cardinality_type, types[0]->type_num);
+        PyObject *merge = PyThunkUnaryFunction_FromFunction(unary_mergesort, initial_thunk);
+        PyThunk_FromOperation_Inplace((PyThunkObject*) v, merge, cardinality, cardinality_type, types[0]->type_num);
+    }
     Py_RETURN_NONE;
 }
 
 void initialize_sort(void) {
     import_array();
+    import_umath();
 }

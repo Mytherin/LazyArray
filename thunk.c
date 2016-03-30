@@ -218,6 +218,25 @@ PyThunk_FromOperation_Inplace(PyThunkObject *thunk, PyObject *operation, ssize_t
     }
 }
 
+int 
+PyArray_ScalarType(int typenum) {
+    switch (typenum) {
+        case NPY_INT8:
+        case NPY_INT16:
+        case NPY_INT32:
+        case NPY_INT64:
+        case NPY_UINT8:
+        case NPY_UINT16:
+        case NPY_UINT32:
+        case NPY_UINT64:
+        case NPY_FLOAT:
+        case NPY_DOUBLE:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 PyArrayObject*
 PyArrayObject_Block(PyArrayObject *array, size_t start, size_t end) {
     Py_INCREF(PyArray_DESCR(array));

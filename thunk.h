@@ -65,6 +65,7 @@ void PyThunk_Init(void);
 
 void* PyArray_BlockPointer(PyArrayObject *array, size_t block);
 void* PyArray_ElementPointer(PyArrayObject *array, size_t element);
+int PyArray_ScalarType(int typenum);
 
 PyNumberMethods thunk_as_number;
 extern struct PyMethodDef thunk_methods[];
