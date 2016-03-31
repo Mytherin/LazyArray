@@ -148,13 +148,72 @@ void recursive_merge(char *inptr, size_t block_size, size_t total_size, size_t e
     recursive_merge(inptr, block_size * 2, total_size, elsize, typenum);
 }
 
+static void recursive_merge_nomemcpy(char **input_arrays, size_t *input_sizes, size_t array_count, char *result_ptr, size_t elsize, int typenum, bool temporary_array) {
+    if (array_count == 1) return;
+
+    // recursively merge the blocks without doing memcpy: should be faster
+    // every iteration we reduce the amount of arrays by half
+    char **result_arrays = NULL;
+    size_t *result_sizes = NULL;
+    size_t new_array_count = array_count % 2 == 0 ? array_count / 2 : array_count / 2 + 1;
+    if (new_array_count == 1) {
+        // final iteration: in this case we store the result in the result_ptr directly, instead of in intermediate arrays so we don't need to do any copying
+        merge_arrays(input_arrays[0], input_arrays[1], input_sizes[0], input_sizes[1], result_ptr, typenum);
+    } else {
+        // regular iteration, we create intermediate arrays to store the merged arrays
+        result_arrays = malloc(new_array_count * sizeof(char*));
+        result_sizes = malloc(new_array_count * sizeof(size_t));
+        size_t i;
+        for(i = 0; i < array_count - 1; i += 2) {
+            // we merge two arrays at a time, input_arrays[i] and input_arrays[i + 1]
+            size_t array_index = i / 2;
+            // total size of the merged array is the combined size of the merged arrays
+            size_t new_size = input_sizes[i] + input_sizes[i + 1]; 
+            // allocate space for the merged array
+            result_arrays[array_index] = malloc(new_size * elsize);
+            result_sizes[array_index] = new_size;
+            // now merge the actual arrays into the allocated space
+            merge_arrays(input_arrays[i], input_arrays[i + 1], input_sizes[i], input_sizes[i + 1], result_arrays[array_index], typenum);
+            // free the previously allocated space, if it was allocated by a previous call of recursive_merge()
+            if (temporary_array) {
+                free(input_arrays[i]);
+                free(input_arrays[i + 1]);
+            }
+        }
+        // if the number of arrays is odd we have one 'unmerged' array, simply at that array to the end and push it to the next iteration
+        if (i == array_count - 1) {
+            result_arrays[new_array_count - 1] = input_arrays[i];
+            result_sizes[new_array_count - 1] = input_sizes[i];
+        }
+    }
+    free(input_sizes);
+    free(input_arrays);
+    recursive_merge_nomemcpy(result_arrays, result_sizes, new_array_count, result_ptr, elsize, typenum, true);
+}
+
 void unary_mergesort(PyArrayObject **args) {
-    if (PyArray_DATA(args[0]) != PyArray_DATA(args[1])) {
+    size_t total_size = PyArray_SIZE(args[0]);
+    size_t elsize = PyArray_DESCR(args[0])->elsize;
+    int typenum = PyArray_DESCR(args[0])->type_num;
+    size_t array_count = total_size % BLOCK_SIZE == 0 ? total_size / BLOCK_SIZE : total_size / BLOCK_SIZE + 1;
+    size_t right_size = total_size % BLOCK_SIZE == 0 ? BLOCK_SIZE : total_size % BLOCK_SIZE;
+
+    char *input_data = PyArray_BYTES(args[0]);
+    char *result_data = PyArray_BYTES(args[1]);
+
+    char **input_arrays = malloc(array_count * sizeof(char*));
+    size_t *input_sizes = malloc(array_count * sizeof(size_t));
+    for(size_t i = 0; i < array_count; i++) {
+        input_arrays[i] = input_data + (i * BLOCK_SIZE * elsize);
+        input_sizes[i] = i == array_count - 1 ? right_size : BLOCK_SIZE;
+    }
+    recursive_merge_nomemcpy(input_arrays, input_sizes, array_count, result_data, elsize, typenum, false);
+    /*if (PyArray_DATA(args[0]) != PyArray_DATA(args[1])) {
         // we do an in-place merge, so if the input and output data is different we first copy the data
         PyArray_CopyInto(args[1], args[0]);
     }
     // each of the blocks (should be) sorted here, so now we can merge them together recursively
-    recursive_merge(PyArray_BYTES(args[1]), BLOCK_SIZE, PyArray_SIZE(args[1]), PyArray_DESCR(args[1])->elsize, PyArray_DESCR(args[1])->type_num);
+    recursive_merge(PyArray_BYTES(args[1]), BLOCK_SIZE, PyArray_SIZE(args[1]), PyArray_DESCR(args[1])->elsize, PyArray_DESCR(args[1])->type_num);*/
 }
 
 void unary_sort(PyArrayObject **args) {
